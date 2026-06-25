@@ -4,3 +4,5 @@ requirement.md
 roadmap.md
 __pycache__
 data
+.*
+tests

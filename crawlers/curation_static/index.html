@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USYD Course Planner - Curation Portal</title>
+  <!-- Google Fonts: Outfit (headings) and Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header Area -->
+    <header class="app-header">
+      <div class="logo-area">
+        <h1>USYD Planner</h1>
+        <span class="badge badge-accent">Curation Portal</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-total">0</span>
+          <span class="stat-label">Total Units</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value text-emerald" id="stat-curated">0</span>
+          <span class="stat-label">Curated</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value text-rose" id="stat-pending">0</span>
+          <span class="stat-label">Needs Curation</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Filter & Search Controls -->
+    <section class="controls-section">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search by unit code or title...">
+      </div>
+      <div class="filter-pills">
+        <button class="pill active" data-filter="all">All Units</button>
+        <button class="pill" data-filter="pending">Needs Curation</button>
+        <button class="pill" data-filter="curated">Curated</button>
+      </div>
+    </section>
+
+    <!-- Main Content Area: Grid of Cards -->
+    <main class="grid-section">
+      <div class="units-grid" id="units-grid">
+        <!-- Rendered dynamically by app.js -->
+        <div class="loading-state">Loading unit database...</div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
