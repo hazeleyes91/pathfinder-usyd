@@ -2,34 +2,34 @@ import time
 import argparse
 import asyncio
 from pathlib import Path
-from crawlers.config import DATA_DIR, RAW_HTML_DIR, REQUEST_DELAY_SECONDS
-from crawlers.unit_detail_crawler import load_target_codes, fetch_and_cache_unit
-from crawlers.parser_base import parse_all_cached_units
+from config import DATA_DIR, RAW_HTML_DIR, REQUEST_DELAY_SECONDS, CRAWL_YEARS
+from crawlers.unit_detail import load_target_codes, fetch_and_cache_unit
+from parsers.base import parse_all_cached_units
 
 # Expanded seed list of known computing units that might be missing from search indexes
 SEED_OVERRIDE_CODES = ["COMP2022", "COMP2922", "MATH1064"]
+
+def _is_unit_cached(unit_code: str) -> bool:
+    """Returns True if the unit HTML is cached in any configured year directory."""
+    return any(
+        (RAW_HTML_DIR / str(year) / f"{unit_code}.html").exists()
+        for year in CRAWL_YEARS
+    )
 
 def ensure_unit_cached(unit_code: str, target_year: int = 2026) -> bool:
     """
     Checks if a unit code is cached locally in our database.
     If missing, fetches it on demand and triggers re-serialization.
     """
-    cache_path = RAW_HTML_DIR / str(target_year) / f"{unit_code}.html"
-    is_cached = cache_path.exists()
-    
-    if not is_cached:
-        for year in [2025, 2024, 2023]:
-            if (RAW_HTML_DIR / str(year) / f"{unit_code}.html").exists():
-                is_cached = True
-                break
+    is_cached = _is_unit_cached(unit_code)
                 
     if is_cached:
         return True
         
     print(f"Dynamic discovery triggered: Unit {unit_code} is missing from cache. Fetching...")
-    success = fetch_and_cache_unit(unit_code)
-    if success:
-        parse_all_cached_units(target_year)
+    success, resolved_year = fetch_and_cache_unit(unit_code)
+    if success and resolved_year:
+        parse_all_cached_units(resolved_year)
     return success
 
 def run_orchestrator(limit: int = None, force_fetch: bool = False, target_year: int = 2026, rebuild_index: bool = False):
@@ -45,8 +45,8 @@ def run_orchestrator(limit: int = None, force_fetch: bool = False, target_year: 
     
     if rebuild_index:
         print("Rebuilding unit index cache...")
-        from crawlers.search_crawler import crawl_unit_codes, save_unit_codes
-        from crawlers.handbook_crawler import crawl_handbook_unit_codes
+        from crawlers.search import crawl_unit_codes, save_unit_codes
+        from crawlers.handbook import crawl_handbook_unit_codes
         
         # 1. Fetch active search index
         print("Crawling search pages (Playwright)...")
@@ -77,21 +77,14 @@ def run_orchestrator(limit: int = None, force_fetch: bool = False, target_year: 
     failed = 0
     
     for idx, code in enumerate(master_queue):
-        cache_path_2026 = RAW_HTML_DIR / str(target_year) / f"{code}.html"
-        is_cached = cache_path_2026.exists()
-        
-        if not is_cached:
-            for fallback_year in [2025, 2024, 2023]:
-                if (RAW_HTML_DIR / str(fallback_year) / f"{code}.html").exists():
-                    is_cached = True
-                    break
+        is_cached = _is_unit_cached(code)
         
         if is_cached and not force_fetch:
             print(f"[{idx + 1}/{len(master_queue)}] Skipped {code} (already cached).")
             skipped += 1
             continue
             
-        success = fetch_and_cache_unit(code)
+        success, _ = fetch_and_cache_unit(code)
         if success:
             fetched += 1
         else:

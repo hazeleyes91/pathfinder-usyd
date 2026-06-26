@@ -3,7 +3,7 @@ from pathlib import Path
 
 # --- Directory Structures ---
 # We use pathlib for cross-platform compatibility (Windows vs Unix path separators)
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 RAW_HTML_DIR = DATA_DIR / "raw" / "html"
 RAW_JSON_DIR = DATA_DIR / "raw" / "json"
@@ -46,6 +46,21 @@ def init_directories():
     print("Directory bootstrap complete.")
     print(f"Data root: {DATA_DIR}")
     print(f"HTML cache directory: {RAW_HTML_DIR}")
+
+def get_ai_model():
+    """
+    Determines and returns the AI model to use based on environment keys.
+    """
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if gemini_key:
+        os.environ["GOOGLE_API_KEY"] = gemini_key
+        return "google:gemini-3.1-flash-lite"
+    elif openai_key:
+        return "openai:gpt-4o-mini"
+    else:
+        from pydantic_ai.models.test import TestModel
+        return TestModel()
 
 if __name__ == "__main__":
     init_directories()

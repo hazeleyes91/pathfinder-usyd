@@ -2,7 +2,7 @@ import re
 import time
 import requests
 from bs4 import BeautifulSoup
-from crawlers.config import HANDBOOK_URLS, REQUEST_DELAY_SECONDS
+from config import HANDBOOK_URLS, REQUEST_DELAY_SECONDS
 
 def crawl_handbook_unit_codes() -> list[str]:
     """

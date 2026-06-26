@@ -3,7 +3,7 @@ import json
 import re
 from pathlib import Path
 from playwright.async_api import async_playwright
-from crawlers.config import SEARCH_URL, PLAYWRIGHT_HEADLESS, DATA_DIR
+from config import SEARCH_URL, PLAYWRIGHT_HEADLESS, DATA_DIR
 
 async def crawl_unit_codes(query: str) -> list[str]:
     """
@@ -15,8 +15,9 @@ async def crawl_unit_codes(query: str) -> list[str]:
         page = await browser.new_page()
         
         # Inject query and number of results directly in the URL hash
-        rrp = 100
-        url = f"{SEARCH_URL}#q={query}&numberOfResults={rrp}"
+        # RESULTS_PER_PAGE determines the size of the Coveo results page request
+        RESULTS_PER_PAGE = 100
+        url = f"{SEARCH_URL}#q={query}&numberOfResults={RESULTS_PER_PAGE}"
         await page.goto(url)
         
         # Wait for the Coveo dynamic components to finish loading results
@@ -43,6 +44,7 @@ async def crawl_unit_codes(query: str) -> list[str]:
                     unit_codes.append(match.group(1))
                     
         unique_codes = sorted(list(set(unit_codes)))
+        await browser.close()
         return unique_codes
 
 def save_unit_codes(unit_codes: list[str], filename: str = "unit_codes.json"):
@@ -62,7 +64,3 @@ if __name__ == "__main__":
     codes = asyncio.run(crawl_unit_codes("COMP"))
     save_unit_codes(codes)
     print(f"Extracted {len(codes)} unique unit codes.")
-
-        
-
-

@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 from bs4 import BeautifulSoup
-from crawlers.config import DATA_DIR, RAW_HTML_DIR
+from config import DATA_DIR, RAW_HTML_DIR
 
 def get_table_value(soup: BeautifulSoup, label_pattern: str) -> str:
     """
@@ -35,7 +35,7 @@ def parse_unit_html(file_path: Path) -> dict:
             title = title_text.split(":", 1)[1].strip()
         else:
             title = title_text
-
+ 
     # 2. Extract and cast Credit Points
     cp_text = get_table_value(soup, "Credit points")
     try:
@@ -67,7 +67,7 @@ def parse_unit_html(file_path: Path) -> dict:
         "status": "ACTIVE"
     }
 
-def parse_all_cached_units(year: int = 2026):
+def parse_all_cached_units(year: int = 2026) -> None:
     """
     Iterates through all raw HTML files for the year, parses them,
     and saves the collected list to a JSON file.
