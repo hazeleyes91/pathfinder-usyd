@@ -9,8 +9,12 @@ RAW_HTML_DIR = DATA_DIR / "raw" / "html"
 RAW_JSON_DIR = DATA_DIR / "raw" / "json"
 
 # --- Target Crawling Years ---
-# Current target year is 2026. Fallback sequence goes back 3 years.
-CRAWL_YEARS = [2026, 2025, 2024, 2023]
+from datetime import datetime
+_now = datetime.now()
+# Default to next year if running in Q4 (Oct-Dec) to align with handbook release schedules
+DEFAULT_TARGET_YEAR = _now.year + (1 if _now.month >= 10 else 0)
+# Fallback sequence goes back 3 years from target
+CRAWL_YEARS = [DEFAULT_TARGET_YEAR - i for i in range(4)]
 
 # --- Target URL Endpoints ---
 # Public URL for checking units of study
@@ -21,9 +25,42 @@ DETAIL_URL_TEMPLATE = f"{BASE_URL}/units/{{unit_code}}"
 
 # --- Static Handbook Pages for Direct Index Seeding ---
 HANDBOOK_URLS = [
-    f"{BASE_URL}/handbooks/science/table-a/subject-areas/computer-science/unit-of-study-table.html",
-    f"{BASE_URL}/handbooks/science/table-a/subject-areas/data-science/unit-of-study-table.html",
-    f"{BASE_URL}/handbooks/science/table-a/subject-areas/mathematics/unit-of-study-table.html"
+    f"{BASE_URL}/handbooks/arts/coursework/arts-arts-advanced-studies/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/arts-extended/foundation-studies-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/honours-advanced-studies-media-communications/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/arts-laws/media-studies-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/arts-medicine/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/arts-social-work/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/commerce-arts/arts-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/commerce-arts/commerce-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/economics-economics-advanced-studies/economics-program-unit-of-study-tables.html",
+    f"{BASE_URL}/handbooks/arts/coursework/economics-economics-advanced-studies/advanced-economics-program-unit-of-study-tables.html",
+    f"{BASE_URL}/handbooks/arts/coursework/economics-economics-advanced-studies/advanced-coursework-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/b-economics-b-arts/economics-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/b-economics-b-arts/arts-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/education-early-childhood/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/education-health-physical-education/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/education-primary/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/education-secondary-advanced/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/education-secondary-advanced/advanced-coursework-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/b-international-studies/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/hons-b-international-studies/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/b-languages/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/b-languages-hons/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/b-media-communications/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/b-media-communications-hons/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/b-politics-philosophy-economics/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/politics-philosophy-economics-honours/unit-of-study-table-honours-international-relations.html",
+    f"{BASE_URL}/handbooks/arts/coursework/politics-philosophy-economics-honours/unit-of-study-table-philosophy-honours.html",
+    f"{BASE_URL}/handbooks/arts/coursework/politics-philosophy-economics-honours/unit-of-study-table-honours-economics.html",
+    f"{BASE_URL}/handbooks/arts/coursework/politics-philosophy-economics-honours/unit-of-study-table-honours-political-economy.html",
+    f"{BASE_URL}/handbooks/arts/coursework/science-arts/science-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/science-arts/arts-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/social-work/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/visual-arts-visual-arts-advanced-studies/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/visual-arts-visual-arts-advanced-studies/advanced-coursework-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/visual-arts-honours/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/arts/coursework/diploma-language-studies/unit-of-study-table.html"
 ]
 
 # --- Crawling & Request Politeness Settings ---

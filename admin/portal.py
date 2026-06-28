@@ -7,13 +7,14 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, TypeAdapter
-from config import DATA_DIR
+from config import DATA_DIR, DEFAULT_TARGET_YEAR
 from parsers.schemas import RuleParseResult, UnitRequirement, CreditPointRequirement, LogicalRequirement
 
 app = FastAPI(title="USYD Course Planner - Curation Admin Portal")
 
 # Define path references
-DB_PATH = DATA_DIR / "parsed_rules_2026.json"
+PORTAL_YEAR = int(os.getenv("PORTAL_YEAR", DEFAULT_TARGET_YEAR))
+DB_PATH = DATA_DIR / f"parsed_rules_{PORTAL_YEAR}.json"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 RuleExpression = RuleParseResult

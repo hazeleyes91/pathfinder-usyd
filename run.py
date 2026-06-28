@@ -2,37 +2,34 @@ import time
 import argparse
 import asyncio
 from pathlib import Path
-from config import DATA_DIR, RAW_HTML_DIR, REQUEST_DELAY_SECONDS, CRAWL_YEARS
+from config import DATA_DIR, RAW_HTML_DIR, REQUEST_DELAY_SECONDS, CRAWL_YEARS, DEFAULT_TARGET_YEAR
 from crawlers.unit_detail import load_target_codes, fetch_and_cache_unit
 from parsers.base import parse_all_cached_units
 
 # Expanded seed list of known computing units that might be missing from search indexes
 SEED_OVERRIDE_CODES = ["COMP2022", "COMP2922", "MATH1064"]
 
-def _is_unit_cached(unit_code: str) -> bool:
-    """Returns True if the unit HTML is cached in any configured year directory."""
-    return any(
-        (RAW_HTML_DIR / str(year) / f"{unit_code}.html").exists()
-        for year in CRAWL_YEARS
-    )
+def _is_unit_cached(unit_code: str, target_year: int) -> bool:
+    """Returns True if the unit HTML is cached in the target year directory."""
+    return (RAW_HTML_DIR / str(target_year) / f"{unit_code}.html").exists()
 
-def ensure_unit_cached(unit_code: str, target_year: int = 2026) -> bool:
+def ensure_unit_cached(unit_code: str, target_year: int = DEFAULT_TARGET_YEAR) -> bool:
     """
     Checks if a unit code is cached locally in our database.
     If missing, fetches it on demand and triggers re-serialization.
     """
-    is_cached = _is_unit_cached(unit_code)
+    is_cached = _is_unit_cached(unit_code, target_year)
                 
     if is_cached:
         return True
         
     print(f"Dynamic discovery triggered: Unit {unit_code} is missing from cache. Fetching...")
-    success, resolved_year = fetch_and_cache_unit(unit_code)
+    success, resolved_year = fetch_and_cache_unit(unit_code, target_year)
     if success and resolved_year:
-        parse_all_cached_units(resolved_year)
+        parse_all_cached_units(target_year)
     return success
 
-def run_orchestrator(limit: int = None, force_fetch: bool = False, target_year: int = 2026, rebuild_index: bool = False):
+def run_orchestrator(limit: int = None, force_fetch: bool = False, target_year: int = DEFAULT_TARGET_YEAR, rebuild_index: bool = False):
     """
     Orchestrates the crawling pipeline:
     1. Optionally rebuilds index by combining search results and static handbook tables.
@@ -77,14 +74,14 @@ def run_orchestrator(limit: int = None, force_fetch: bool = False, target_year: 
     failed = 0
     
     for idx, code in enumerate(master_queue):
-        is_cached = _is_unit_cached(code)
+        is_cached = _is_unit_cached(code, target_year)
         
         if is_cached and not force_fetch:
             print(f"[{idx + 1}/{len(master_queue)}] Skipped {code} (already cached).")
             skipped += 1
             continue
             
-        success, _ = fetch_and_cache_unit(code)
+        success, _ = fetch_and_cache_unit(code, target_year)
         if success:
             fetched += 1
         else:
@@ -101,7 +98,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="USYD Course Planner Master Crawl Orchestrator")
     parser.add_argument("--limit", type=int, default=None, help="Maximum number of units to process")
     parser.add_argument("--force", action="store_true", help="Force fetch from web even if locally cached")
-    parser.add_argument("--year", type=int, default=2026, help="Target academic year")
+    parser.add_argument("--year", type=int, default=DEFAULT_TARGET_YEAR, help="Target academic year")
     parser.add_argument("--rebuild-index", action="store_true", help="Re-crawl search pages and handbook tables to rebuild unit_codes.json")
     
     args = parser.parse_args()

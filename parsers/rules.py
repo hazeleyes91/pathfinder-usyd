@@ -2,7 +2,7 @@
 import json
 import os
 import asyncio
-from config import DATA_DIR
+from config import DATA_DIR, DEFAULT_TARGET_YEAR
 from parsers.rule_regex import parse_rules_with_regex
 from parsers.rule_ai import parse_rules_with_ai
 from parsers.rule_preprocess import parse_rules_with_preprocess
@@ -102,7 +102,7 @@ async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys:
         log_ai_rule_attempt(unit_code, field_name, text, ai_res.model_dump())
         return detect_soft_warnings(text, ai_res.model_dump()), True
 
-async def parse_all_rules(year: int = 2026, max_units: int = None, regex_only: bool = False, preproc_regex_only: bool = False):
+async def parse_all_rules(year: int = DEFAULT_TARGET_YEAR, max_units: int = None, regex_only: bool = True, preproc_regex_only: bool = False):
     input_path = DATA_DIR / "raw" / "json" / f"parsed_units_{year}.json"
     output_path = DATA_DIR / f"parsed_rules_{year}.json"
     
@@ -217,13 +217,13 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Parse prerequisite/corequisite/prohibition rules for all units")
     parser.add_argument("--limit", type=int, default=None, help="Maximum number of units to parse (default: all)")
-    parser.add_argument("--year", type=int, default=2026, help="Target academic year (default: 2026)")
-    parser.add_argument("--regex-only", action="store_true", help="Bypass AI parsing and mark complex rules for curation")
+    parser.add_argument("--year", type=int, default=DEFAULT_TARGET_YEAR, help="Target academic year (default: dynamic)")
+    parser.add_argument("--use-ai", action="store_true", help="Enable AI parsing agent fallback for complex rules")
     parser.add_argument("--preproc-regex-only", action="store_true", help="Bypass AI Expert, check only if Regex 2 parses preprocessed output")
     args = parser.parse_args()
     asyncio.run(parse_all_rules(
         year=args.year, 
         max_units=args.limit, 
-        regex_only=args.regex_only, 
+        regex_only=not args.use_ai, 
         preproc_regex_only=args.preproc_regex_only
     ))

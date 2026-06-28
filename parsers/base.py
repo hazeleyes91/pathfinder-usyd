@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 from bs4 import BeautifulSoup
-from config import DATA_DIR, RAW_HTML_DIR
+from config import DATA_DIR, RAW_HTML_DIR, DEFAULT_TARGET_YEAR
 
 def get_table_value(soup: BeautifulSoup, label_pattern: str) -> str:
     """
@@ -23,6 +23,22 @@ def parse_unit_html(file_path: Path) -> dict:
     
     with open(file_path, "r", encoding="utf-8") as f:
         html = f.read()
+        
+    # Check for discontinued placeholder marker
+    if '<div id="status">DISCONTINUED</div>' in html:
+        return {
+            "unit_code": unit_code,
+            "title": "Discontinued Unit",
+            "credit_points": 6,
+            "level": "Unknown",
+            "academic_unit": "Unknown",
+            "prerequisites_text": "None",
+            "corequisites_text": "None",
+            "prohibitions_text": "None",
+            "assumed_knowledge_text": "None",
+            "status": "INACTIVE",
+            "resolved_year": None
+        }
         
     soup = BeautifulSoup(html, "html.parser")
     
@@ -53,6 +69,20 @@ def parse_unit_html(file_path: Path) -> dict:
     prohibitions = get_table_value(soup, "Prohibitions")
     assumed_knowledge = get_table_value(soup, "Assumed knowledge")
     
+    # Parse resolved year from text
+    year_element = soup.find(string=re.compile(r"\d{4} unit information"))
+    resolved_year = None
+    if year_element:
+        match = re.search(r"(\d{4})", year_element)
+        if match:
+            resolved_year = int(match.group(1))
+            
+    # Check for explicit discontinued text in HTML
+    status = "ACTIVE"
+    html_lower = html.lower()
+    if "this unit of study is discontinued" in html_lower or "discontinued unit" in html_lower:
+        status = "INACTIVE"
+    
     # 4. Construct response dictionary matching uos_spec.md
     return {
         "unit_code": unit_code,
@@ -64,10 +94,11 @@ def parse_unit_html(file_path: Path) -> dict:
         "corequisites_text": coreqs,
         "prohibitions_text": prohibitions,
         "assumed_knowledge_text": assumed_knowledge,
-        "status": "ACTIVE"
+        "status": status,
+        "resolved_year": resolved_year
     }
 
-def parse_all_cached_units(year: int = 2026) -> None:
+def parse_all_cached_units(year: int = DEFAULT_TARGET_YEAR) -> None:
     """
     Iterates through all raw HTML files for the year, parses them,
     and saves the collected list to a JSON file.
@@ -83,6 +114,12 @@ def parse_all_cached_units(year: int = 2026) -> None:
         print(f"Parsing {html_file.name}...")
         try:
             unit_data = parse_unit_html(html_file)
+            
+            # Compare resolved year against the target year to mark status as INACTIVE if older
+            res_yr = unit_data.get("resolved_year")
+            if res_yr is not None and res_yr < year:
+                unit_data["status"] = "INACTIVE"
+                
             parsed_units.append(unit_data)
         except Exception as e:
             print(f"Failed to parse {html_file.name}: {e}")
@@ -98,4 +135,4 @@ def parse_all_cached_units(year: int = 2026) -> None:
     print(f"Successfully serialized {len(parsed_units)} units to {target_path}")
 
 if __name__ == "__main__":
-    parse_all_cached_units(2026)
+    parse_all_cached_units(DEFAULT_TARGET_YEAR)
