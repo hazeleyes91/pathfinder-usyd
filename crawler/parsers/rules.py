@@ -3,6 +3,7 @@ import json
 import os
 import asyncio
 import sys
+import re
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -10,6 +11,7 @@ from config import DATA_DIR, DEFAULT_TARGET_YEAR
 from parsers.rule_regex import parse_rules_with_regex
 from parsers.rule_ai import parse_rules_with_ai
 from parsers.rule_preprocess import parse_rules_with_preprocess
+from parsers.schemas import ParserWarning, CurationValidity
 
 def log_ai_rule_attempt(unit_code: str, field_name: str, text: str, parsed_output: dict):
     log_path = DATA_DIR / "ai_rules_log.json"
@@ -32,27 +34,54 @@ def log_ai_rule_attempt(unit_code: str, field_name: str, text: str, parsed_outpu
     except Exception as e:
         print(f"Failed to write to AI rules log: {e}")
 
-def detect_soft_warnings(raw_text: str, parsed_expr: dict) -> dict:
-    if not parsed_expr:
-        return parsed_expr
+def wrap_and_detect_warnings(raw_text: str, parsed_node: dict, needs_curation: bool) -> dict:
+    if not parsed_node:
+        return {
+            "type": "none", 
+            "rule": None, 
+            "warnings": None, 
+            "curation_validity": CurationValidity.NEEDS_MANUAL_REVIEW
+        }
         
-    res = parsed_expr.copy()
-    is_none_rule = (
-        res.get("type") == "none" and 
-        res.get("rule") is None
-    )
+    warns = []
+    text_lower = raw_text.lower()
     
-    # If postgraduate keywords are present and it parsed to 'none'
-    if is_none_rule and any(kw in raw_text.lower() for kw in ["candidate", "master", "enrolled in", "postgrad"]):
-        res["soft_warning"] = "Postgraduate/degree candidate requirement ignored."
-        return res
+    # Check words using regex word boundaries at the start to allow prefixes (e.g. "candidat" matches "candidate") while avoiding middle substring matches (e.g. "BHSC" doesn't match "hsc")
+    def has_word_match(words: list[str]) -> bool:
+        pattern = r'\b(' + '|'.join(re.escape(w) for w in words) + r')'
+        return bool(re.search(pattern, text_lower))
+    
+    # 1. Degree/Program Enrollment Restrictions
+    if has_word_match(["enroll", "admit", "candidat", "stream", "major", "specialis", "bachelor", "master", "program", "degree"]):
+        warns.append(ParserWarning.DEGREE_RESTRICTION)
         
-    # If mark-specific keywords are present in the raw text, but it resolved to a valid unit/cp requirement
-    # (i.e. not a pure/curated none rule)
-    if not is_none_rule and any(kw in raw_text.lower() for kw in ["mark of", "average of", "average mark", "grade", "65 or above", "65 or greater"]):
-        res["soft_warning"] = "Mark/grade threshold requirement simplified to completion."
+    # 2. Grade/Performance Thresholds
+    if has_word_match(["wam", "gpa", "mark", "average", "grade", "%", "percent"]):
+        warns.append(ParserWarning.GRADE_THRESHOLD)
         
-    return res
+    # 3. Academic Level / Year Constraints
+    if has_word_match(["1000", "2000", "3000", "4000", "5000", "level", "intermediate", "senior", "junior", "year"]):
+        warns.append(ParserWarning.LOGIC_SIMPLIFIED)
+        
+    # 4. Departmental / Instructor Permission
+    if has_word_match(["permission", "consent", "approval", "head", "instructor", "department", "coordinator"]):
+        warns.append(ParserWarning.PERMISSION_REQUIRED)
+        
+    # 5. Assumed Knowledge / HSC
+    if has_word_match(["hsc", "assumed", "knowledge", "recommended"]):
+        warns.append(ParserWarning.RECOMMENDED_PREPARATION)
+        
+    root_type = parsed_node.get("type", "none")
+    rule_content = None if root_type == "none" else parsed_node
+    warnings_list = list(set(warns)) if warns else None
+    validity = CurationValidity.NEEDS_MANUAL_REVIEW if needs_curation else CurationValidity.VALID_FOR_PLANNING
+    
+    return {
+        "type": root_type,
+        "rule": rule_content,
+        "warnings": warnings_list,
+        "curation_validity": validity
+    }
 
 async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys: bool, regex_only: bool = False, preproc_regex_only: bool = False) -> tuple[dict, bool]:
     """
@@ -61,11 +90,16 @@ async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys:
     # 1. Regex 1
     regex_res = parse_rules_with_regex(text)
     if regex_res is not None:
-        return detect_soft_warnings(text, regex_res), False
+        return wrap_and_detect_warnings(text, regex_res, needs_curation=False), False
         
     if regex_only:
         print(f"[{unit_code}] {field_name} is complex — tagged for curation (regex-only mode).")
-        return {"type": "none", "rule": None}, True
+        return {
+            "type": "none", 
+            "rule": None, 
+            "warnings": None, 
+            "curation_validity": CurationValidity.NEEDS_MANUAL_REVIEW
+        }, True
 
     # 2. Preprocess Agent (run only if API keys are available)
     if has_keys:
@@ -76,17 +110,27 @@ async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys:
         # Check if preprocessor discarded the rule
         if simplified_text.strip().upper() == "[CURATE]":
             print(f"[{unit_code}] {field_name} discarded by preprocess agent — tagged for curation.")
-            return {"type": "none", "rule": None}, True
+            return {
+                "type": "none", 
+                "rule": None, 
+                "warnings": None, 
+                "curation_validity": CurationValidity.NEEDS_MANUAL_REVIEW
+            }, True
             
         # 3. Regex 2
         regex_res2 = parse_rules_with_regex(simplified_text)
         if regex_res2 is not None:
             print(f"[{unit_code}] {field_name} resolved via Regex 2 after preprocessing: '{simplified_text}'")
-            return detect_soft_warnings(text, regex_res2), False
+            return wrap_and_detect_warnings(text, regex_res2, needs_curation=False), False
             
         if preproc_regex_only:
             print(f"[{unit_code}] {field_name} not matching Regex 2 after preprocessing (preproc-regex-only mode) — tagged for curation.")
-            return {"type": "none", "rule": None}, True
+            return {
+                "type": "none", 
+                "rule": None, 
+                "warnings": None, 
+                "curation_validity": CurationValidity.NEEDS_MANUAL_REVIEW
+            }, True
             
         # 4. AI Expert (run on preprocessed text)
         print(f"[{unit_code}] Parsing simplified {field_name} rule using AI Expert: '{simplified_text}'")
@@ -95,16 +139,26 @@ async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys:
         await asyncio.sleep(5.0)  # cooldown sleep
         
         res_dict = ai_res.model_dump()
+        # Ensure new schema fields exist
+        if "warnings" not in res_dict:
+            res_dict["warnings"] = None
+        
         if ai_res.type == "none" and simplified_text.strip().lower() not in ["none", "none.", ""]:
-            return detect_soft_warnings(text, res_dict), True
+            res_dict["curation_validity"] = CurationValidity.NEEDS_MANUAL_REVIEW
+            return res_dict, True
             
-        return detect_soft_warnings(text, res_dict), False
+        res_dict["curation_validity"] = CurationValidity.VALID_FOR_PLANNING
+        return res_dict, False
     else:
         # Fall back to AI test model if no keys
         print(f"[{unit_code}] {field_name} requires AI parsing but API keys are missing. Tagging for curation.")
         ai_res = await parse_rules_with_ai(text)
         log_ai_rule_attempt(unit_code, field_name, text, ai_res.model_dump())
-        return detect_soft_warnings(text, ai_res.model_dump()), True
+        res_dict = ai_res.model_dump()
+        if "warnings" not in res_dict:
+            res_dict["warnings"] = None
+        res_dict["curation_validity"] = CurationValidity.NEEDS_MANUAL_REVIEW
+        return res_dict, True
 
 async def parse_all_rules(year: int = DEFAULT_TARGET_YEAR, max_units: int = None, regex_only: bool = True, preproc_regex_only: bool = False):
     input_path = DATA_DIR / "raw" / "json" / f"parsed_units_{year}.json"
@@ -149,12 +203,14 @@ async def parse_all_rules(year: int = DEFAULT_TARGET_YEAR, max_units: int = None
         prohibitions_text = unit.get("prohibitions_text", "None")
         
         # Check if we can reuse the existing parsed entry to avoid API limits
+        # We only reuse if the entry contains the new schema keys 'curation_validity'
         if code in existing_db:
             entry = existing_db[code]
             raw = entry.get("raw_rules", {})
             if (raw.get("prerequisites") == prereqs_text and
                 raw.get("corequisites") == coreqs_text and
                 raw.get("prohibitions") == prohibitions_text and
+                "curation_validity" in entry.get("prerequisites_expr", {}) and
                 (not entry.get("needs_curation") or not has_keys)):
                 
                 parsed_rules_db[code] = entry
@@ -171,7 +227,6 @@ async def parse_all_rules(year: int = DEFAULT_TARGET_YEAR, max_units: int = None
         print(f"Processing rules for {code}...")
         
         p_expr, p_curate = await parse_rule_field(prereqs_text, "Prerequisites", code, has_keys, regex_only, preproc_regex_only)
-        # Add inter-field delay to prevent back-to-back AI calls/Preprocess calls
         if not regex_only:
             await asyncio.sleep(1.0)
         c_expr, c_curate = await parse_rule_field(coreqs_text, "Corequisites", code, has_keys, regex_only, preproc_regex_only)

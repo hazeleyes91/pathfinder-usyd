@@ -195,20 +195,27 @@ function createUnitCard(unit) {
     
     // Extract any soft warnings
     const warnings = [];
-    const getSoftWarning = (expr) => {
+    const getParserWarnings = (expr) => {
         if (!expr) return null;
-        if (expr.soft_warning) return expr.soft_warning;
-        if (expr.rule && expr.rule.soft_warning) return expr.rule.soft_warning;
-        return null;
+        let list = [];
+        if (expr.warnings) list = list.concat(expr.warnings);
+        if (expr.rule && expr.rule.warnings) list = list.concat(expr.rule.warnings);
+        
+        if (list.length === 0) return null;
+        return list.map(w => {
+            return w.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }).join(', ');
     };
     
-    const prereqWarn = getSoftWarning(unit.prerequisites_expr);
+    const prereqWarn = getParserWarnings(unit.prerequisites_expr);
     if (prereqWarn) warnings.push(`Prerequisites: ${prereqWarn}`);
     
-    const coreqWarn = getSoftWarning(unit.corequisites_expr);
+    const coreqWarn = getParserWarnings(unit.corequisites_expr);
     if (coreqWarn) warnings.push(`Corequisites: ${coreqWarn}`);
     
-    const prohibWarn = getSoftWarning(unit.prohibitions_expr);
+    const prohibWarn = getParserWarnings(unit.prohibitions_expr);
     if (prohibWarn) warnings.push(`Prohibitions: ${prohibWarn}`);
     
     const warningsHtml = warnings.length > 0 ? `

@@ -3,7 +3,7 @@ import re
 
 def tokenize(text: str):
     token_re = re.compile(
-        r'(?P<CP_SELECTION>\b\d+\s*(?:credit\s*points|cp|p)\s+(?:from|of)\s+[\(\[](?:[A-Z]{4}[0-9X]{4}\b|or|and|\s|,|[\(\)\[\]])+[\)\]]|\b\d+\s*(?:credit\s*points|cp|p)\s+from\s+[A-Z]{4}[0-9X]{4}\b)|'
+        r'(?P<CP_SELECTION>\b\d+\s*(?:credit\s*points|cp|p)\s+(?:from|of|including)\s+[\(\[](?:[A-Z]{4}[0-9X]{4}\b|or|and|\s|,|[\(\)\[\]])+[\)\]]|\b\d+\s*(?:credit\s*points|cp|p)\s+(?:from|including)\s+[A-Z]{4}[0-9X]{4}\b)|'
         r'(?P<CP_MULTI_SUBJECT>\b\d+\s*(?:credit\s*points|cp|p)\s+(?:of|at)\s+(?:any\s+)?(?:\d+[\s-]*(?:or\s+\d+)?[\s-]*(?:level)\s+(?:units\s+)?in\s+)?[\(\[](?:[A-Z]{4}\b|or|and|\s|,|[\(\)\[\]])+[\)\]])|'
         r'(?P<CP_SUBJECT_LEVEL>\b\d+\s*(?:credit\s*points|cp|p)\s+of\s+[A-Z]{4}[0-9X]*)|'
         r'(?P<CP_TOTAL>\b\d+\s*(?:credit\s*points|cp)\b)|'
@@ -109,7 +109,7 @@ class Parser:
             self.consume()
             text = tok[1]
             match = re.match(
-                r"^(\d+)\s*(?:credit\s*points|cp|p)\s+(?:from|of)\s+(?:[\(\[](.*?)[\)\]]|([A-Z]{4}[0-9X]{4}))$",
+                r"^(\d+)\s*(?:credit\s*points|cp|p)\s+(?:from|of|including)\s+(?:[\(\[](.*?)[\)\]]|([A-Z]{4}[0-9X]{4}))$",
                 text,
                 re.IGNORECASE
             )
@@ -250,6 +250,13 @@ def parse_rules_with_regex(rule_text: str) -> dict | None:
     Returns a dictionary if successfully parsed, or None if too complex (requires AI).
     """
     clean_text = rule_text.strip().rstrip(".")
+    
+    # 0. Clean equivalent study variations and normalize brackets
+    clean_text = re.sub(r"\s+or\s+equivalent\s+study\s+at\s+another\s+institution", "", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"\s+or\s+equivalent\s+unit\s+of\s+study", "", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"\s+or\s+equivalent", "", clean_text, flags=re.IGNORECASE)
+    clean_text = clean_text.replace("{", "(").replace("}", ")").replace("[", "(").replace("]", ")")
+    
     # Remove common prefixes/suffixes for credit points/units of study
     clean_text = re.sub(r"^(?:a\s+minimum\s+of\s+|completion\s+of\s+|minimum\s+of\s+)", "", clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r"(?:\s+of\s+units\s+of\s+study|\s+of\s+units)$", "", clean_text, flags=re.IGNORECASE)
