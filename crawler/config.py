@@ -4,7 +4,7 @@ from pathlib import Path
 # --- Directory Structures ---
 # We use pathlib for cross-platform compatibility (Windows vs Unix path separators)
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = BASE_DIR.parent / "data"
 RAW_HTML_DIR = DATA_DIR / "raw" / "html"
 RAW_JSON_DIR = DATA_DIR / "raw" / "json"
 
