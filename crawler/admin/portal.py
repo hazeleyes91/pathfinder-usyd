@@ -120,7 +120,8 @@ def run_crawler_thread(limit: Optional[int] = None, force_fetch: bool = False, t
     try:
         import requests
         from concurrent.futures import ThreadPoolExecutor, as_completed
-        from run import SEED_OVERRIDE_CODES, _is_unit_cached
+        from crawlers.indexer import SEED_OVERRIDE_CODES
+        from crawlers.runner import _is_unit_cached
         from crawlers.unit_detail import load_target_codes, fetch_and_cache_unit
         from parsers.base import parse_all_cached_units
         from config import DETAIL_REQUEST_DELAY_SECONDS
@@ -222,7 +223,7 @@ def run_rebuild_thread():
         import crawlers.search
         from crawlers.search import crawl_unit_codes, save_unit_codes
         from crawlers.handbook import crawl_handbook_unit_codes
-        from run import SEED_OVERRIDE_CODES
+        from crawlers.indexer import SEED_OVERRIDE_CODES
         
         crawler_state["logs"] = []
         crawler_state["errors"] = []
@@ -332,11 +333,11 @@ async def stop_crawler():
 @app.get("/crawler")
 async def serve_crawler_page():
     """Serves the crawler control page."""
-    crawler_file = STATIC_DIR / "crawler.html"
+    crawler_file = STATIC_DIR / "crawler_portal.html"
     if not crawler_file.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="crawler.html file not found."
+            detail="crawler_portal.html file not found."
         )
     return FileResponse(crawler_file)
 
@@ -346,11 +347,11 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 @app.get("/")
 async def serve_root():
     """Serves the primary layout index file."""
-    index_file = STATIC_DIR / "index.html"
+    index_file = STATIC_DIR / "curation_portal.html"
     if not index_file.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Portal index.html template file not found."
+            detail="Portal curation_portal.html template file not found."
         )
     return FileResponse(index_file)
 

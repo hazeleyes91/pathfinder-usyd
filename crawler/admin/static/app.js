@@ -184,7 +184,7 @@ function renderGrid() {
 // Create individual unit curation card DOM node (Split into 2 columns: left: text/actions; right: json editor)
 function createUnitCard(unit) {
     const card = document.createElement("article");
-    card.className = `unit-card ${unit.needs_curation ? 'needs-curate' : 'curated'}`;
+    card.className = `bg-bg border p-6 flex flex-row gap-6 transition-colors border-text ${unit.needs_curation ? 'border-warn-pre' : ''}`;
     card.id = `card-${unit.unit_code}`;
 
     const statusText = unit.needs_curation ? "Needs Curation" : "Curated";
@@ -192,7 +192,6 @@ function createUnitCard(unit) {
     
     const isFlagged = unit.flagged || false;
     const flagText = isFlagged ? "Remove Flag" : "Flag for Later";
-    const flagClass = isFlagged ? "flagged" : "unflagged";
     
     // Extract any soft warnings
     const warnings = [];
@@ -213,64 +212,64 @@ function createUnitCard(unit) {
     if (prohibWarn) warnings.push(`Prohibitions: ${prohibWarn}`);
     
     const warningsHtml = warnings.length > 0 ? `
-        <div class="soft-warnings-container">
+        <div class="bg-transparent border border-warn-miss p-3 flex flex-col gap-1.5 mt-2">
             ${warnings.map(w => `
-                <div class="soft-warning-item">
-                    <span class="soft-warning-icon">⚠️</span>
-                    <span class="soft-warning-text">${w}</span>
+                <div class="flex items-start gap-2 text-warn-miss text-[13px] leading-snug">
+                    <span class="mt-0.5">⚠️</span>
+                    <span class="font-semibold">${w}</span>
                 </div>
             `).join('')}
         </div>
     ` : '';
     
     card.innerHTML = `
-        <div class="card-left">
-            <div class="card-header">
-                <div class="unit-meta">
-                    <h2>${unit.unit_code}</h2>
-                    <div class="unit-title">${unit.title}</div>
+        <div class="flex-1 flex flex-col gap-4 border-r border-text pr-6">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="font-extrabold text-[20px] tracking-tight">${unit.unit_code}</h2>
+                    <div class="text-[14px] text-dim font-semibold">${unit.title}</div>
                 </div>
             </div>
             
             ${warningsHtml}
             
-            <div class="raw-rules-container">
-                <div class="raw-rule-item">
-                    <strong>Prerequisites Raw:</strong>
-                    <div class="raw-rule-text">${unit.raw_rules.prerequisites || 'None'}</div>
+            <div class="flex flex-col gap-3 mt-2">
+                <div class="flex flex-col gap-1">
+                    <strong class="text-[12px] font-extrabold uppercase tracking-wide text-dim">Prerequisites Raw:</strong>
+                    <div class="bg-block border border-dim p-2.5 text-dim text-[13px] leading-relaxed h-[60px] overflow-y-auto">${unit.raw_rules.prerequisites || 'None'}</div>
                 </div>
-                <div class="raw-rule-item">
-                    <strong>Corequisites Raw:</strong>
-                    <div class="raw-rule-text">${unit.raw_rules.corequisites || 'None'}</div>
+                <div class="flex flex-col gap-1">
+                    <strong class="text-[12px] font-extrabold uppercase tracking-wide text-dim">Corequisites Raw:</strong>
+                    <div class="bg-block border border-dim p-2.5 text-dim text-[13px] leading-relaxed h-[60px] overflow-y-auto">${unit.raw_rules.corequisites || 'None'}</div>
                 </div>
-                <div class="raw-rule-item">
-                    <strong>Prohibitions Raw:</strong>
-                    <div class="raw-rule-text">${unit.raw_rules.prohibitions || 'None'}</div>
+                <div class="flex flex-col gap-1">
+                    <strong class="text-[12px] font-extrabold uppercase tracking-wide text-dim">Prohibitions Raw:</strong>
+                    <div class="bg-block border border-dim p-2.5 text-dim text-[13px] leading-relaxed h-[60px] overflow-y-auto">${unit.raw_rules.prohibitions || 'None'}</div>
                 </div>
             </div>
 
-            <div class="card-actions">
-                <button class="btn btn-primary" id="save-btn-${unit.unit_code}" onclick="saveUnitEdits('${unit.unit_code}')">Save Changes</button>
-                <button class="btn btn-secondary ${flagClass}" id="flag-btn-${unit.unit_code}" onclick="toggleFlag('${unit.unit_code}')">${flagText}</button>
-                <button class="btn btn-secondary status-toggle-btn ${statusClass}" onclick="toggleStatus('${unit.unit_code}')">${statusText}</button>
+            <div class="flex gap-3 mt-auto pt-4">
+                <button class="bg-active text-active-txt px-4 py-2 text-[13px]" id="save-btn-${unit.unit_code}" onclick="saveUnitEdits('${unit.unit_code}')">Save Changes</button>
+                <button class="border border-text px-4 py-2 text-[13px] ${isFlagged ? 'bg-text text-bg' : 'bg-transparent text-text'}" id="flag-btn-${unit.unit_code}" onclick="toggleFlag('${unit.unit_code}')">${flagText}</button>
+                <button class="border px-4 py-2 text-[13px] ${unit.needs_curation ? 'border-warn-pre text-warn-pre' : 'border-text text-text'}" onclick="toggleStatus('${unit.unit_code}')">${statusText}</button>
             </div>
         </div>
         
-        <div class="card-right">
-            <div class="card-tabs">
+        <div class="flex-[1.2] flex flex-col gap-4">
+            <div class="flex border-b border-text">
                 <button class="tab-btn active" onclick="switchTab(this, 'prerequisites')">Prereq JSON</button>
                 <button class="tab-btn" onclick="switchTab(this, 'corequisites')">Coreq JSON</button>
                 <button class="tab-btn" onclick="switchTab(this, 'prohibitions')">Prohibitions JSON</button>
             </div>
 
-            <div class="tab-content" id="content-${unit.unit_code}">
+            <div class="flex flex-col flex-1 min-h-[240px]" id="content-${unit.unit_code}">
                 <!-- Active JSON editor textarea will render here -->
             </div>
         </div>
     `;
 
     // Render the default tab (prerequisites)
-    renderTabContent(card.querySelector(".tab-content"), unit, 'prerequisites');
+    renderTabContent(card.querySelector("#content-" + unit.unit_code), unit, 'prerequisites');
 
     return card;
 }
@@ -296,9 +295,9 @@ function renderTabContent(container, unit, type) {
     const exprStr = JSON.stringify(exprObj, null, 2);
 
     container.innerHTML = `
-        <div class="editor-wrapper">
+        <div class="flex flex-col flex-1 relative gap-2">
             <textarea class="json-editor valid" id="editor-${unit.unit_code}-${type}" oninput="validateEditor(this)" spellcheck="false">${exprStr}</textarea>
-            <div class="validation-msg ok" id="msg-${unit.unit_code}-${type}">✓ Valid JSON Schema</div>
+            <div class="text-[12px] font-bold flex items-center gap-1 text-text" id="msg-${unit.unit_code}-${type}">✓ Valid JSON Schema</div>
         </div>
     `;
 }
@@ -322,15 +321,17 @@ window.validateEditor = function(textarea) {
         
         textarea.classList.remove("invalid");
         textarea.classList.add("valid");
-        msgDiv.className = "validation-msg ok";
+        msgDiv.className = "text-[12px] font-bold flex items-center gap-1 text-text";
         msgDiv.innerText = "✓ Valid JSON Schema";
         saveBtn.removeAttribute("disabled");
+        saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
     } catch (err) {
         textarea.classList.remove("valid");
         textarea.classList.add("invalid");
-        msgDiv.className = "validation-msg error";
+        msgDiv.className = "text-[12px] font-bold flex items-center gap-1 text-warn-pre";
         msgDiv.innerText = `✗ JSON Syntax Error: ${err.message}`;
         saveBtn.setAttribute("disabled", "true");
+        saveBtn.classList.add("opacity-50", "cursor-not-allowed");
     }
 };
 

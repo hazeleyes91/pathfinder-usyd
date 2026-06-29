@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USYD Course Planner — Crawler Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" type="text/tailwindcss" href="theme.css" />
+  
+  <style type="text/tailwindcss">
+    /* Crawler specific overrides */
+    :root {
+      --console-bg: #1A1A1A;
+      --console-text: #34D399;
+      --console-err: #F87171;
+    }
+    body.dark-mode {
+      --console-bg: #000000;
+      --console-text: #4ADE80;
+      --console-err: #F87171;
+    }
+    .console-box { @apply bg-[var(--console-bg)] text-[var(--console-text)] font-mono text-[13px] p-4 border border-text overflow-y-auto flex flex-col gap-1; }
+    .console-box.err { @apply text-[var(--console-err)]; }
+  </style>
+</head>
+<body class="dark-mode p-6">
+
+  <!-- Top bar -->
+  <header class="flex justify-between items-center border-b border-text pb-5 mb-6 shrink-0">
+    <div>
+      <h1 class="font-extrabold text-[24px] tracking-tight">USYD Crawler Portal</h1>
+      <p class="text-[13px] text-dim mt-1">Status management & failure reporting</p>
+    </div>
+    <div class="flex gap-4 items-center">
+      <button id="btn-theme" onclick="toggleTheme()">Light mode</button>
+      <a href="/" class="text-[14px] font-semibold text-dim hover:text-text no-underline">← Back to curation portal</a>
+    </div>
+  </header>
+
+  <main class="grid grid-cols-1 md:grid-cols-3 gap-6 grow overflow-hidden">
+    <!-- Left Column: Control Panel -->
+    <div class="md:col-span-1 flex flex-col gap-6 overflow-y-auto pr-2">
+      <div class="card">
+        <h2 class="font-extrabold text-[18px] tracking-tight border-b border-text pb-2">Crawl controls</h2>
+        
+        <!-- Limits -->
+        <div class="flex flex-col gap-1.5 mt-2">
+          <label class="text-[12px] font-extrabold tracking-wide text-dim uppercase">Crawl queue limit</label>
+          <div class="flex items-center gap-3">
+            <input type="number" id="input-limit" placeholder="All" min="1" class="w-24 border border-dim bg-transparent text-center p-2 text-text font-semibold outline-none">
+            <span class="text-[13px] font-semibold">units</span>
+          </div>
+        </div>
+
+        <!-- Force Fetch -->
+        <label class="flex items-center gap-2 cursor-pointer select-none mt-2">
+          <input type="checkbox" id="input-force" class="appearance-none w-4 h-4 bg-block checked:bg-active cursor-pointer border border-dim checked:border-none rounded-none">
+          <span class="text-[14px] font-semibold">Force fetch (bypass cache)</span>
+        </label>
+
+        <!-- Actions -->
+        <div class="flex flex-col gap-2 mt-4">
+          <div class="flex gap-2">
+            <button id="btn-start" class="btn-primary flex-1" onclick="startCrawl()">Start crawl</button>
+            <button id="btn-stop" class="btn-danger flex-1 hidden" onclick="stopCrawl()">Stop</button>
+          </div>
+          <button id="btn-rebuild" class="w-full text-center" onclick="startRebuild()">Rebuild unit index</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="font-extrabold text-[18px] tracking-tight border-b border-text pb-2">Crawler metrics</h2>
+        
+        <div class="grid grid-cols-2 gap-4 mt-2">
+          <div>
+            <div class="text-[12px] font-extrabold tracking-wide text-dim uppercase">Status</div>
+            <div id="metric-status" class="text-[20px] font-extrabold text-dim tracking-tight">Idle</div>
+          </div>
+          <div>
+            <div class="text-[12px] font-extrabold tracking-wide text-dim uppercase">Current unit</div>
+            <div id="metric-current" class="text-[20px] font-extrabold tracking-tight">—</div>
+          </div>
+          <div>
+            <div class="text-[12px] font-extrabold tracking-wide text-dim uppercase">Processed</div>
+            <div id="metric-processed" class="text-[24px] font-extrabold tracking-tight">0 / 0</div>
+          </div>
+          <div>
+            <div class="text-[12px] font-extrabold tracking-wide text-dim uppercase">Failed</div>
+            <div id="metric-failed" class="text-[24px] font-extrabold text-dim tracking-tight">0</div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="w-full bg-block h-2 border border-dim mt-2">
+          <div id="progress-bar" class="bg-active h-full w-0 transition-all duration-300"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Columns: Logs and Errors -->
+    <div class="md:col-span-2 flex flex-col gap-6 overflow-hidden">
+      <div class="card grow flex flex-col overflow-hidden !gap-2">
+        <h2 class="font-extrabold text-[18px] tracking-tight border-b border-text pb-2 shrink-0">Activity log</h2>
+        <div id="console-logs" class="console-box grow">
+          <div class="opacity-50">// System ready. Click Start crawl or Rebuild unit index to begin.</div>
+        </div>
+      </div>
+
+      <div class="card flex flex-col h-[240px] shrink-0 !gap-2">
+        <div class="flex justify-between items-baseline border-b border-text pb-2 shrink-0">
+          <h2 class="font-extrabold text-[18px] tracking-tight text-warn-pre">Failed / flagged outlines</h2>
+          <span id="error-count" class="text-[12px] font-bold bg-block text-dim px-2 py-0.5 border border-dim">0</span>
+        </div>
+        <div id="console-errors" class="console-box err grow">
+          <div class="opacity-50">// No issues reported.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let pollInterval = null;
+
+    function toggleTheme() {
+      const isDark = document.body.classList.toggle('dark-mode');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      updateThemeButton();
+    }
+
+    function updateThemeButton() {
+      const isDark = document.body.classList.contains('dark-mode');
+      document.getElementById('btn-theme').textContent = isDark ? 'Light mode' : 'Dark mode';
+    }
+
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'dark') document.body.classList.add('dark-mode');
+    else document.body.classList.remove('dark-mode');
+    updateThemeButton();
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/crawler/status');
+        const state = await res.json();
+
+        const isRunning = state.is_running;
+        const isRebuilding = state.is_rebuilding || false;
+
+        document.getElementById('metric-status').textContent = isRunning ? 'Running' : (isRebuilding ? 'Rebuilding' : 'Idle');
+        document.getElementById('metric-status').className = (isRunning || isRebuilding)
+          ? 'text-[20px] font-extrabold text-active tracking-tight' 
+          : 'text-[20px] font-extrabold text-dim tracking-tight';
+          
+        document.getElementById('metric-current').textContent = state.current_unit || '—';
+        document.getElementById('metric-processed').textContent = `${state.processed} / ${state.total}`;
+        document.getElementById('metric-failed').textContent = state.failed;
+        document.getElementById('metric-failed').className = state.failed > 0 
+          ? 'text-[24px] font-extrabold text-warn-pre tracking-tight' 
+          : 'text-[24px] font-extrabold text-dim tracking-tight';
+
+        if (state.total > 0) {
+          const pct = Math.round((state.processed / state.total) * 100);
+          document.getElementById('progress-bar').style.width = `${pct}%`;
+        } else {
+          document.getElementById('progress-bar').style.width = '0%';
+        }
+
+        const logBox = document.getElementById('console-logs');
+        if (state.logs.length > 0) {
+          logBox.innerHTML = state.logs.map(log => `<div>${log}</div>`).join('');
+          logBox.scrollTop = logBox.scrollHeight;
+        } else {
+          logBox.innerHTML = '<div class="opacity-50">// System ready. Click Start crawl or Rebuild unit index to begin.</div>';
+        }
+
+        const errBox = document.getElementById('console-errors');
+        document.getElementById('error-count').textContent = state.errors.length;
+        if (state.errors.length > 0) {
+          errBox.innerHTML = state.errors.map(err => `<div>${err}</div>`).join('');
+          errBox.scrollTop = errBox.scrollHeight;
+        } else {
+          errBox.innerHTML = '<div class="opacity-50">// No issues reported.</div>';
+        }
+
+        const startBtn = document.getElementById('btn-start');
+        const stopBtn = document.getElementById('btn-stop');
+        const rebuildBtn = document.getElementById('btn-rebuild');
+        const limitInput = document.getElementById('input-limit');
+        const forceCheck = document.getElementById('input-force');
+
+        if (isRunning || isRebuilding) {
+          if (isRunning) {
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+            rebuildBtn.textContent = 'Rebuild unit index';
+          } else {
+            startBtn.classList.remove('hidden');
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50');
+            startBtn.textContent = 'Start crawl';
+            stopBtn.classList.add('hidden');
+            rebuildBtn.textContent = 'Rebuilding index...';
+          }
+          
+          rebuildBtn.disabled = true;
+          rebuildBtn.classList.add('opacity-50');
+          limitInput.disabled = true;
+          forceCheck.disabled = true;
+
+          if (!pollInterval) pollInterval = setInterval(fetchStatus, 1000);
+        } else {
+          startBtn.classList.remove('hidden');
+          startBtn.disabled = false;
+          startBtn.classList.remove('opacity-50');
+          startBtn.textContent = 'Start crawl';
+          
+          stopBtn.classList.add('hidden');
+          
+          rebuildBtn.disabled = false;
+          rebuildBtn.classList.remove('opacity-50');
+          rebuildBtn.textContent = 'Rebuild unit index';
+          
+          limitInput.disabled = false;
+          forceCheck.disabled = false;
+
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching status:', e);
+      }
+    }
+
+    async function startCrawl() {
+      const limitVal = document.getElementById('input-limit').value;
+      const forceVal = document.getElementById('input-force').checked;
+
+      let url = '/api/crawler/start?force=' + forceVal;
+      if (limitVal) url += '&limit=' + limitVal;
+
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        if (res.ok) {
+          fetchStatus();
+          if (!pollInterval) pollInterval = setInterval(fetchStatus, 1000);
+        } else {
+          const err = await res.json();
+          alert('Crawl failed to start: ' + err.detail);
+        }
+      } catch (e) {
+        alert('Network error trying to start crawl.');
+      }
+    }
+
+    async function startRebuild() {
+      try {
+        const res = await fetch('/api/crawler/rebuild', { method: 'POST' });
+        if (res.ok) {
+          fetchStatus();
+          if (!pollInterval) pollInterval = setInterval(fetchStatus, 1000);
+        } else {
+          const err = await res.json();
+          alert('Rebuild failed to start: ' + err.detail);
+        }
+      } catch (e) {
+        alert('Network error trying to start index rebuild.');
+      }
+    }
+
+    async function stopCrawl() {
+      try {
+        const res = await fetch('/api/crawler/stop', { method: 'POST' });
+        if (res.ok) fetchStatus();
+      } catch (e) {
+        alert('Network error trying to stop crawl.');
+      }
+    }
+
+    fetchStatus();
+  </script>
+</body>
+</html>

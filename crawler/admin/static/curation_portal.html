@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USYD Course Planner - Curation Admin Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" type="text/tailwindcss" href="theme.css" />
+  
+  <style type="text/tailwindcss">
+    .stat-card { @apply bg-bg border border-text p-3 flex flex-col items-end min-w-[120px]; }
+    .stat-label { @apply text-[11px] text-dim uppercase font-extrabold tracking-wide mb-1; }
+    .stat-value { @apply text-[24px] font-extrabold leading-none tracking-tight; }
+    
+    .filter-pill { @apply bg-transparent border-none text-dim font-bold text-[13px] px-4 py-1.5 cursor-pointer outline-none hover:text-text; }
+    .filter-pill.active { @apply bg-active text-active-txt; }
+    
+    .status-badge { @apply px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide border; }
+    .status-badge.pending { @apply text-warn-pre border-warn-pre bg-transparent; }
+    .status-badge.verified { @apply text-text border-text bg-transparent; }
+    
+    .json-editor { @apply w-full flex-1 bg-bg border border-dim p-3 text-text font-mono text-[13px] outline-none resize-none transition-colors; }
+    .json-editor.invalid { @apply border-warn-pre; }
+    .json-editor.valid { @apply border-text; }
+    
+    .tab-btn { @apply bg-transparent border-b-2 border-transparent text-dim font-bold text-[13px] px-4 py-2 hover:text-text; }
+    .tab-btn.active { @apply border-text text-text; }
+  </style>
+</head>
+<body class="dark-mode">
+  
+  <div class="flex flex-col h-screen p-6 overflow-hidden max-w-[1300px] mx-auto w-full">
+    
+    <!-- Header Section -->
+    <header class="flex justify-between items-center border-b border-text pb-5 mb-5 shrink-0">
+      <div>
+        <h1 class="font-extrabold text-[24px] tracking-tight">USYD Course Planner</h1>
+        <p class="text-[13px] text-dim mt-1 font-semibold uppercase tracking-wide">Manual Curation Interface | <a href="/crawler" class="text-text hover:underline cursor-pointer">Crawler Portal</a></p>
+      </div>
+      
+      <!-- Stats Panel -->
+      <div class="flex gap-4">
+        <div class="stat-card">
+          <span class="stat-label">Total</span>
+          <span class="stat-value" id="stat-total">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Curated</span>
+          <span class="stat-value text-text" id="stat-curated">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Pending</span>
+          <span class="stat-value text-warn-pre" id="stat-pending">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Flagged</span>
+          <span class="stat-value text-text" id="stat-flagged">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Controls Section -->
+    <section class="flex justify-between items-center gap-6 mb-5 shrink-0">
+      <div class="relative flex-grow max-w-[600px]">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-dim text-[14px]">🔍</span>
+        <input type="text" id="search-input" placeholder="Search by unit code or title..." autocomplete="off" class="w-full bg-bg border border-dim text-text px-4 py-2 pl-10 text-[14px] font-semibold outline-none hover:border-text focus:border-text">
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <span class="text-[13px] font-extrabold text-dim uppercase tracking-wide">Filter:</span>
+        <div class="flex border border-text p-1">
+          <button class="filter-pill active" data-filter="all">All</button>
+          <button class="filter-pill" data-filter="pending">Needs Curation</button>
+          <button class="filter-pill" data-filter="curated">Curated</button>
+          <button class="filter-pill" data-filter="flagged">Flagged</button>
+        </div>
+        <button onclick="document.body.classList.toggle('dark-mode')" class="text-[12px] uppercase font-bold border border-dim px-3 py-1.5 ml-2 hover:bg-text hover:text-bg">Theme</button>
+      </div>
+    </section>
+
+    <!-- Rules Grid Section -->
+    <main class="grow overflow-y-auto pr-2">
+      <div class="flex flex-col gap-6" id="rules-grid">
+        <!-- Cards injected via JS -->
+        <div class="text-center py-20 text-[16px] font-semibold text-dim">Loading unit of study rules...</div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
