@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USYD Course Planner — Crawler Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  
+  <style type="text/tailwindcss">
+    :root {
+      --bg: #F4F3EF;
+      --block: #FFFFFF;
+      --border: #E2E2DF;
+      --text: #1A1A1A;
+      --dim: #737372;
+      --active: #1A1A1A;
+      --active-txt: #FFFFFF;
+      --accent-err: #DC2626;
+      --console-bg: #1A1A1A;
+      --console-text: #34D399;
+      --console-err: #F87171;
+    }
+
+    :root.dark {
+      --bg: #121212;
+      --block: #1E1E1E;
+      --border: #2E2E2E;
+      --text: #E5E5E5;
+      --dim: #8E8E8E;
+      --active: #E5E5E5;
+      --active-txt: #121212;
+      --accent-err: #DC2626;
+      --console-bg: #000000;
+      --console-text: #4ADE80;
+      --console-err: #F87171;
+    }
+
+    @theme {
+      --color-bg: var(--bg);
+      --color-block: var(--block);
+      --color-text: var(--text);
+      --color-dim: var(--dim);
+      --color-active: var(--active);
+      --color-active-txt: var(--active-txt);
+      --color-accent-err: var(--accent-err);
+      
+      --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      @apply font-inter bg-bg text-text text-[15px] leading-snug tracking-[-0.2px] min-h-screen flex flex-col p-8 transition-colors duration-150;
+    }
+
+    /* Standardized Soft Corners (5-20% border radius mapped to 12px) */
+    .card {
+      @apply bg-block border border-[var(--border)] p-6 rounded-xl flex flex-col gap-4 transition-colors duration-150;
+    }
+
+    button, input[type="number"] {
+      @apply font-semibold text-text bg-neutral-200 dark:bg-neutral-800 border-none rounded-lg px-4 py-2 cursor-pointer outline-none transition-colors duration-150;
+    }
+    button:hover { @apply bg-neutral-300 dark:bg-neutral-700; }
+    button.btn-primary { @apply bg-active text-active-txt; }
+    button.btn-primary:hover { @apply opacity-90; }
+    button.btn-danger { @apply bg-accent-err text-white; }
+    button.btn-danger:hover { @apply bg-red-700; }
+    input[type="number"] { @apply cursor-text w-24 text-center bg-neutral-200 dark:bg-neutral-800 text-text; }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <header class="flex justify-between items-center border-b border-[var(--border)] pb-5 mb-8">
+    <div>
+      <h1 class="font-extrabold text-[24px] tracking-tight">USYD Crawler Portal</h1>
+      <p class="text-[13px] text-dim mt-1">Status management & failure reporting</p>
+    </div>
+    <div class="flex gap-4 items-center">
+      <button id="btn-theme" class="text-[13px] px-3 py-1.5 bg-neutral-200 dark:bg-neutral-800 text-text rounded-md font-semibold hover:bg-neutral-300 dark:hover:bg-neutral-700" onclick="toggleTheme()">Theme Toggle</button>
+      <a href="/" class="text-[14px] font-semibold text-dim hover:text-text transition-colors">← Back to curation portal</a>
+    </div>
+  </header>
+
+  <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Left Column: Control Panel -->
+    <div class="md:col-span-1 flex flex-col gap-6">
+      <div class="card">
+        <h2 class="font-bold text-[18px] tracking-tight">Crawl controls</h2>
+        
+        <!-- Limits -->
+        <div class="flex flex-col gap-1.5 mt-2">
+          <label class="text-[12px] font-extrabold tracking-wide text-dim">Crawl queue limit</label>
+          <div class="flex items-center gap-3">
+            <input type="number" id="input-limit" placeholder="All" min="1">
+            <span class="text-[13px] text-dim">units</span>
+          </div>
+        </div>
+
+        <!-- Force Fetch -->
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" id="input-force" class="appearance-none w-4 h-4 rounded bg-neutral-300 dark:bg-neutral-800 checked:bg-active cursor-pointer border border-[var(--border)] checked:border-none">
+          <span class="text-[14px]">Force fetch (bypass local cache)</span>
+        </label>
+
+        <!-- Actions -->
+        <div class="flex flex-col gap-2 mt-2">
+          <div class="flex gap-2">
+            <button id="btn-start" class="btn-primary flex-1" onclick="startCrawl()">Start crawl</button>
+            <button id="btn-stop" class="btn-danger flex-1 hidden" onclick="stopCrawl()">Stop</button>
+          </div>
+          <button id="btn-rebuild" class="w-full text-center bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-text font-semibold rounded-lg px-4 py-2" onclick="startRebuild()">Rebuild unit index</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="font-bold text-[18px] tracking-tight">Crawler metrics</h2>
+        
+        <div class="grid grid-cols-2 gap-4 mt-2">
+          <div>
+            <div class="text-[11px] font-extrabold tracking-wide text-dim">Status</div>
+            <div id="metric-status" class="text-[20px] font-extrabold text-dim">Idle</div>
+          </div>
+          <div>
+            <div class="text-[11px] font-extrabold tracking-wide text-dim">Current unit</div>
+            <div id="metric-current" class="text-[20px] font-extrabold">—</div>
+          </div>
+          <div>
+            <div class="text-[11px] font-extrabold tracking-wide text-dim">Processed</div>
+            <div id="metric-processed" class="text-[24px] font-extrabold">0</div>
+          </div>
+          <div>
+            <div class="text-[11px] font-extrabold tracking-wide text-dim">Failed</div>
+            <div id="metric-failed" class="text-[24px] font-extrabold text-dim">0</div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="w-full bg-neutral-300 dark:bg-neutral-800 h-2 rounded-full overflow-hidden mt-2">
+          <div id="progress-bar" class="bg-active h-full w-0 transition-all duration-300"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Columns: Logs and Errors -->
+    <div class="md:col-span-2 flex flex-col gap-6">
+      <div class="card grow flex flex-col h-[300px]">
+        <h2 class="font-bold text-[18px] tracking-tight">Activity log</h2>
+        <div id="console-logs" class="grow bg-[var(--console-bg)] rounded-lg p-4 font-mono text-[13px] text-[var(--console-text)] overflow-y-auto flex flex-col gap-1 select-text">
+          <div class="text-neutral-500">// System ready. Click Start crawl or Rebuild unit index to begin.</div>
+        </div>
+      </div>
+
+      <div class="card flex flex-col h-[200px]">
+        <div class="flex justify-between items-baseline">
+          <h2 class="font-bold text-[18px] tracking-tight text-red-500">Failed / flagged outlines</h2>
+          <span id="error-count" class="text-[12px] font-bold bg-neutral-200 dark:bg-neutral-800 text-dim px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="console-errors" class="grow bg-[var(--console-bg)] rounded-lg p-4 font-mono text-[13px] text-[var(--console-err)] overflow-y-auto flex flex-col gap-1 select-text">
+          <div class="text-neutral-500">// No issues reported.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let pollInterval = null;
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      updateThemeButton();
+    }
+
+    // Update the button text
+    function updateThemeButton() {
+      const isDark = document.documentElement.classList.contains('dark');
+      document.getElementById('btn-theme').textContent = isDark ? 'Light mode' : 'Dark mode';
+    }
+
+    // Initialize theme
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    updateThemeButton();
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/crawler/status');
+        const state = await res.json();
+
+        const isRunning = state.is_running;
+        const isRebuilding = state.is_rebuilding || false;
+
+        // Update indicators
+        document.getElementById('metric-status').textContent = isRunning ? 'Running' : (isRebuilding ? 'Rebuilding' : 'Idle');
+        document.getElementById('metric-status').className = (isRunning || isRebuilding)
+          ? 'text-[20px] font-extrabold text-green-500' 
+          : 'text-[20px] font-extrabold text-dim';
+          
+        document.getElementById('metric-current').textContent = state.current_unit || '—';
+        document.getElementById('metric-processed').textContent = `${state.processed} / ${state.total}`;
+        document.getElementById('metric-failed').textContent = state.failed;
+        document.getElementById('metric-failed').className = state.failed > 0 
+          ? 'text-[24px] font-extrabold text-red-500' 
+          : 'text-[24px] font-extrabold text-dim';
+
+        // Calculate progress percentage
+        if (state.total > 0) {
+          const pct = Math.round((state.processed / state.total) * 100);
+          document.getElementById('progress-bar').style.width = `${pct}%`;
+        } else {
+          document.getElementById('progress-bar').style.width = '0%';
+        }
+
+        // Render logs
+        const logBox = document.getElementById('console-logs');
+        if (state.logs.length > 0) {
+          logBox.innerHTML = state.logs.map(log => `<div>${log}</div>`).join('');
+          logBox.scrollTop = logBox.scrollHeight;
+        } else {
+          logBox.innerHTML = '<div class="text-neutral-500">// System ready. Click Start crawl or Rebuild unit index to begin.</div>';
+        }
+
+        // Render errors
+        const errBox = document.getElementById('console-errors');
+        document.getElementById('error-count').textContent = state.errors.length;
+        if (state.errors.length > 0) {
+          errBox.innerHTML = state.errors.map(err => `<div>${err}</div>`).join('');
+          errBox.scrollTop = errBox.scrollHeight;
+        } else {
+          errBox.innerHTML = '<div class="text-neutral-500">// No issues reported.</div>';
+        }
+
+        // Update buttons and inputs state
+        const startBtn = document.getElementById('btn-start');
+        const stopBtn = document.getElementById('btn-stop');
+        const rebuildBtn = document.getElementById('btn-rebuild');
+        const limitInput = document.getElementById('input-limit');
+        const forceCheck = document.getElementById('input-force');
+
+        if (isRunning) {
+          startBtn.classList.add('hidden');
+          stopBtn.classList.remove('hidden');
+          
+          rebuildBtn.disabled = true;
+          rebuildBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          rebuildBtn.textContent = 'Rebuild unit index';
+          
+          limitInput.disabled = true;
+          forceCheck.disabled = true;
+
+          if (!pollInterval) {
+            pollInterval = setInterval(fetchStatus, 1000);
+          }
+        } else if (isRebuilding) {
+          startBtn.classList.remove('hidden');
+          startBtn.disabled = true;
+          startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          startBtn.textContent = 'Start crawl';
+          
+          stopBtn.classList.add('hidden');
+          
+          rebuildBtn.disabled = true;
+          rebuildBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          rebuildBtn.textContent = 'Rebuilding index...';
+          
+          limitInput.disabled = true;
+          forceCheck.disabled = true;
+
+          if (!pollInterval) {
+            pollInterval = setInterval(fetchStatus, 1000);
+          }
+        } else {
+          startBtn.classList.remove('hidden');
+          startBtn.disabled = false;
+          startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          startBtn.textContent = 'Start crawl';
+          
+          stopBtn.classList.add('hidden');
+          
+          rebuildBtn.disabled = false;
+          rebuildBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          rebuildBtn.textContent = 'Rebuild unit index';
+          
+          limitInput.disabled = false;
+          forceCheck.disabled = false;
+
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching status:', e);
+      }
+    }
+
+    async function startCrawl() {
+      const limitVal = document.getElementById('input-limit').value;
+      const forceVal = document.getElementById('input-force').checked;
+
+      let url = '/api/crawler/start?force=' + forceVal;
+      if (limitVal) url += '&limit=' + limitVal;
+
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        if (res.ok) {
+          fetchStatus();
+          if (!pollInterval) {
+            pollInterval = setInterval(fetchStatus, 1000);
+          }
+        } else {
+          const err = await res.json();
+          alert('Crawl failed to start: ' + err.detail);
+        }
+      } catch (e) {
+        alert('Network error trying to start crawl.');
+      }
+    }
+
+    async function startRebuild() {
+      try {
+        const res = await fetch('/api/crawler/rebuild', { method: 'POST' });
+        if (res.ok) {
+          fetchStatus();
+          if (!pollInterval) {
+            pollInterval = setInterval(fetchStatus, 1000);
+          }
+        } else {
+          const err = await res.json();
+          alert('Rebuild failed to start: ' + err.detail);
+        }
+      } catch (e) {
+        alert('Network error trying to start index rebuild.');
+      }
+    }
+
+    async function stopCrawl() {
+      try {
+        const res = await fetch('/api/crawler/stop', { method: 'POST' });
+        if (res.ok) {
+          fetchStatus();
+        }
+      } catch (e) {
+        alert('Network error trying to stop crawl.');
+      }
+    }
+
+    // Initial load
+    fetchStatus();
+  </script>
+
+</body>
+</html>

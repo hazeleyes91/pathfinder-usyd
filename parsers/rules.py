@@ -2,6 +2,10 @@
 import json
 import os
 import asyncio
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 from config import DATA_DIR, DEFAULT_TARGET_YEAR
 from parsers.rule_regex import parse_rules_with_regex
 from parsers.rule_ai import parse_rules_with_ai

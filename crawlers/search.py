@@ -1,8 +1,10 @@
 import asyncio
 import json
 import re
+import sys
 from pathlib import Path
 from playwright.async_api import async_playwright
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 from config import SEARCH_URL, PLAYWRIGHT_HEADLESS, DATA_DIR
 
 async def crawl_unit_codes(query: str) -> list[str]:
@@ -35,21 +37,24 @@ async def crawl_unit_codes(query: str) -> list[str]:
 
         # Parse links and extract unique 8-character unit codes
         links = await page.locator("a").all()
-        unit_codes = []
+        unit_codes_dict = {}
         for link in links:
             href = await link.get_attribute("href")
             if href:
                 match = re.search(r"/units/([A-Z]{4}\d{4})", href)
                 if match:
-                    unit_codes.append(match.group(1))
+                    code = match.group(1)
+                    unit_codes_dict.setdefault(code, []).append(url)
                     
-        unique_codes = sorted(list(set(unit_codes)))
+        for code in unit_codes_dict:
+            unit_codes_dict[code] = sorted(list(set(unit_codes_dict[code])))
+            
         await browser.close()
-        return unique_codes
+        return unit_codes_dict
 
-def save_unit_codes(unit_codes: list[str], filename: str = "unit_codes.json"):
+def save_unit_codes(unit_codes: dict[str, list[str]], filename: str = "unit_codes.json"):
     """
-    Writes the list of unit codes to DATA_DIR / 'raw' / filename in JSON format.
+    Writes the mapping of unit codes to parent links to DATA_DIR / 'raw' / filename in JSON format.
     """
     out_dir = DATA_DIR / "raw" / "json"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -57,7 +62,7 @@ def save_unit_codes(unit_codes: list[str], filename: str = "unit_codes.json"):
     
     with open(target_path, "w", encoding="utf-8") as f:
         json.dump(unit_codes, f, indent=2)
-    print(f"Saved {len(unit_codes)} unit codes to {target_path}")
+    print(f"Saved {len(unit_codes)} unit codes with parent mapping to {target_path}")
 
 if __name__ == "__main__":
     # Test script execution

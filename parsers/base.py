@@ -1,7 +1,9 @@
 import json
 import re
+import sys
 from pathlib import Path
 from bs4 import BeautifulSoup
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 from config import DATA_DIR, RAW_HTML_DIR, DEFAULT_TARGET_YEAR
 
 def get_table_value(soup: BeautifulSoup, label_pattern: str) -> str:
@@ -98,7 +100,7 @@ def parse_unit_html(file_path: Path) -> dict:
         "resolved_year": resolved_year
     }
 
-def parse_all_cached_units(year: int = DEFAULT_TARGET_YEAR) -> None:
+def parse_all_cached_units(year: int = DEFAULT_TARGET_YEAR, incremental: bool = False) -> None:
     """
     Iterates through all raw HTML files for the year, parses them,
     and saves the collected list to a JSON file.
@@ -108,9 +110,28 @@ def parse_all_cached_units(year: int = DEFAULT_TARGET_YEAR) -> None:
         print(f"Directory {html_dir} does not exist.")
         return
         
+    existing_units = {}
+    out_dir = DATA_DIR / "raw" / "json"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target_path = out_dir / f"parsed_units_{year}.json"
+    
+    if incremental and target_path.exists():
+        try:
+            with open(target_path, "r", encoding="utf-8") as f:
+                for u in json.load(f):
+                    existing_units[u["unit_code"]] = u
+            print(f"Loaded {len(existing_units)} existing parsed units for incremental parsing.")
+        except Exception as e:
+            print(f"Failed to load existing parsed units for incremental parsing: {e}")
+            
     parsed_units = []
     # Loop over all .html files in the directory
     for html_file in html_dir.glob("*.html"):
+        unit_code = html_file.stem
+        if incremental and unit_code in existing_units:
+            parsed_units.append(existing_units[unit_code])
+            continue
+            
         print(f"Parsing {html_file.name}...")
         try:
             unit_data = parse_unit_html(html_file)
@@ -124,11 +145,6 @@ def parse_all_cached_units(year: int = DEFAULT_TARGET_YEAR) -> None:
         except Exception as e:
             print(f"Failed to parse {html_file.name}: {e}")
             
-    # Define target path: data/raw/json/parsed_units_{year}.json
-    out_dir = DATA_DIR / "raw" / "json"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    target_path = out_dir / f"parsed_units_{year}.json"
-    
     with open(target_path, "w", encoding="utf-8") as f:
         json.dump(parsed_units, f, indent=2)
         

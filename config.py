@@ -23,8 +23,20 @@ SEARCH_URL = f"{BASE_URL}/units"
 # Direct unit details endpoint format. E.g., https://www.sydney.edu.au/units/COMP2123
 DETAIL_URL_TEMPLATE = f"{BASE_URL}/units/{{unit_code}}"
 
+# --- Search Indexing Prefixes ---
+SEARCH_PREFIXES = ["COMP", "INFO", "MATH", "ACCT", "BUSS", "DATA"]
+
 # --- Static Handbook Pages for Direct Index Seeding ---
 HANDBOOK_URLS = [
+    # Architecture, Design, and Planning
+    f"{BASE_URL}/handbooks/architecture/undergraduate/b-architecture-environments/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/architecture/undergraduate/b-design-architecture/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/architecture/undergraduate/b-design-architecture-m-architecture/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/architecture/undergraduate/b-interaction-design-advanced-studies/design-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/architecture/undergraduate/b-interaction-design-advanced-studies/design-advanced-studies-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/architecture/undergraduate/b-design-honours/unit-of-study-table.html",
+
+    # Arts and Social Sciences
     f"{BASE_URL}/handbooks/arts/coursework/arts-arts-advanced-studies/unit-of-study-table.html",
     f"{BASE_URL}/handbooks/arts/coursework/arts-extended/foundation-studies-unit-of-study-table.html",
     f"{BASE_URL}/handbooks/arts/coursework/honours-advanced-studies-media-communications/unit-of-study-table.html",
@@ -60,12 +72,90 @@ HANDBOOK_URLS = [
     f"{BASE_URL}/handbooks/arts/coursework/visual-arts-visual-arts-advanced-studies/unit-of-study-table.html",
     f"{BASE_URL}/handbooks/arts/coursework/visual-arts-visual-arts-advanced-studies/advanced-coursework-unit-of-study-table.html",
     f"{BASE_URL}/handbooks/arts/coursework/visual-arts-honours/unit-of-study-table.html",
-    f"{BASE_URL}/handbooks/arts/coursework/diploma-language-studies/unit-of-study-table.html"
+    f"{BASE_URL}/handbooks/arts/coursework/diploma-language-studies/unit-of-study-table.html",
+
+    # Business School
+    f"{BASE_URL}/handbooks/business-school/coursework/commerce/commerce-degree-core/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/commerce/commerce-degree-electives/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/advanced-computing-commerce/commerce-degree-core/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/advanced-computing-commerce/commerce-degree-electives/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/advanced-computing-commerce/advanced-computing-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/commerce-arts/commerce-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/commerce-arts/arts-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/engineering-commerce/engineering-honours-core-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/commerce-science/commerce-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/business-school/coursework/commerce-science/science-unit-of-study-table.html",
+
+    # Faculty of Engineering
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/core-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/aeronautical/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/aeronautical-with-space/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/biomedical/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/chemical-biomolecular/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/civil/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/electrical/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/environmental/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/mechanical/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/mechanical-with-space/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/mechatronic/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/mechatronic-with-space/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/engineering-honours/streams/software/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/advanced-computing/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/advanced-computing/majors/computational-data-science/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/advanced-computing/majors/computer-science/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/advanced-computing/majors/cybersecurity/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/advanced-computing/majors/software-development/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/project-management/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/project-management/project-management-majors/built-environment/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/engineering/project-management/project-management-majors/construction/unit-of-study-table.html",
+
+    # Interdisciplinary Studies
+    f"{BASE_URL}/handbooks/interdisciplinary-studies/table-s.html",
+    f"{BASE_URL}/handbooks/interdisciplinary-studies/table-s/electives.html",
+    f"{BASE_URL}/handbooks/interdisciplinary-studies/open-learning-environment/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/interdisciplinary-studies/dalyell-stream/unit-of-study-table.html",
+
+    # Medicine and Health
+    f"{BASE_URL}/handbooks/medicine-health/coursework/exercise-sport-science-advanced-studies/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/medicine-health/coursework/exercise-sport-science-advanced-studies/physical-activity-health-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/medicine-health/coursework/science-nursing/science-nursing-table.html",
+    f"{BASE_URL}/handbooks/medicine-health/double-degree/arts-medicine/foundation-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/medicine-health/honours/nursing-honours/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/medicine-health/honours/health-sciences-honours/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/medicine-health/coursework/speech-pathology/honours-unit-of-study-table.html",
+
+    # Science
+    f"{BASE_URL}/handbooks/science/coursework/agricultural-science/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/science/coursework/animal-veterinary-bioscience/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/science/coursework/liberal-arts-science/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/science/coursework/liberal-arts-science-extended/foundation-studies-table.html",
+    f"{BASE_URL}/handbooks/science/coursework/mathematical-sciences/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/science/coursework/psychology/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/science/coursework/science-extended/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/science/coursework/science-arts/science-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/science/coursework/science-medicine/unit-of-study-table.html",
+
+    # Sydney Conservatorium of Music
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/bachelor-of-music/honours-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/bachelor-of-music/majors/musicology/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/bachelor-of-music/streams/performance/piano-classical/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/bachelor-of-music/streams/music-education/jazz-voice/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/bachelor-of-music/streams/music-education/voice-classical/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/diploma-of-music/piano-classical/unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/elective-tables/music-education.html",
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/elective-tables/music-skills.html",
+    f"{BASE_URL}/handbooks/conservatorium/undergraduate/elective-tables/performance-ensemble.html",
+
+    # Sydney Law School
+    f"{BASE_URL}/handbooks/law/undergraduate/compulsory-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/law/undergraduate/electives-p1-unit-of-study-table.html",
+    f"{BASE_URL}/handbooks/law/undergraduate/electives-p2-jurisprudence-unit-of-study-table.html"
 ]
 
 # --- Crawling & Request Politeness Settings ---
 # To prevent trigger IP blocking or server overload, we introduce a delay between requests
 REQUEST_DELAY_SECONDS = 1.5
+DETAIL_REQUEST_DELAY_SECONDS = 0.5
 # Request timeout in milliseconds (used for Playwright and HTTP requests)
 TIMEOUT_MS = 30000
 # Run Playwright in headless mode (no visual browser window) to save resources

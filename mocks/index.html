@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USYD Course Planner Mockup</title>
+  <style>
+    /* 1. Core Variables and Monochromatic System */
+    :root {
+      --bg: #ffffff;
+      --text: #000000;
+      --border: #000000;
+      --divider: #cccccc;
+      --dimmed: #777777;
+      --warning-bg: #fffbe6;
+      --warning-border: #ffd700;
+      --card-bg: #ffffff;
+      --sidebar-width-left: 300px;
+      --sidebar-width-right: 80px;
+    }
+
+    body.dark-mode {
+      --bg: #000000;
+      --text: #ffffff;
+      --border: #ffffff;
+      --divider: #333333;
+      --dimmed: #aaaaaa;
+      --warning-bg: #1a1500;
+      --warning-border: #ffd700;
+      --card-bg: #000000;
+    }
+
+    /* 2. Global Reset and Layout */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      font-size: 14px;
+      line-height: 1.4;
+      transition: background-color 0.1s, color 0.1s;
+    }
+
+    /* Flat Presentation: Zero radius, zero shadow, flat borders */
+    button, input, select {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 0;
+      padding: 6px 12px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    button:hover, select:hover {
+      background-color: var(--divider);
+    }
+
+    input[type="text"] {
+      cursor: text;
+      background: var(--bg);
+    }
+
+    /* 3. Top Header Bar */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--border);
+      padding: 10px 20px;
+      height: 55px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-weight: bold;
+      text-transform: none; /* Sentence case enforced */
+    }
+
+    .top-controls {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .mode-toggle-group, .tab-group {
+      display: flex;
+      border: 1px solid var(--border);
+    }
+
+    .mode-btn, .tab-btn {
+      border: none;
+      padding: 4px 12px;
+      background: transparent;
+    }
+
+    .mode-btn.active, .tab-btn.active {
+      background-color: var(--text);
+      color: var(--bg);
+    }
+
+    .updates-indicator {
+      font-size: 12px;
+      color: var(--dimmed);
+    }
+
+    /* 4. Three-Column Workspace Split */
+    .workspace {
+      display: flex;
+      flex-grow: 1;
+      height: calc(100vh - 55px);
+      overflow: hidden;
+    }
+
+    /* Left Sidebar */
+    .left-sidebar {
+      width: var(--sidebar-width-left);
+      border-right: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      background-color: var(--bg);
+    }
+
+    /* Center Planner Canvas */
+    .planner-canvas {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background-color: var(--bg);
+    }
+
+    /* Right Utility Sidebar */
+    .right-sidebar {
+      width: var(--sidebar-width-right);
+      border-left: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 10px;
+      gap: 15px;
+      flex-shrink: 0;
+      background-color: var(--bg);
+    }
+
+    .vertical-btn {
+      width: 100%;
+      text-align: center;
+      padding: 8px 4px;
+      font-size: 12px;
+    }
+
+    /* 5. Left Sidebar Component Panels */
+    .panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .panel-header {
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+      font-weight: bold;
+    }
+
+    .search-box {
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 5px;
+    }
+
+    .search-row input {
+      flex-grow: 1;
+    }
+
+    .filter-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+    }
+
+    .filter-row select {
+      flex-grow: 1;
+    }
+
+    .search-results-list {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Search Result Unit Card */
+    .unit-card {
+      border: 1px solid var(--border);
+      background-color: var(--card-bg);
+      padding: 10px;
+      cursor: grab;
+    }
+
+    .unit-card:hover {
+      background-color: var(--divider);
+    }
+
+    .unit-card-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .unit-card-code {
+      color: var(--text);
+    }
+
+    .unit-card-title {
+      font-size: 12px;
+      color: var(--dimmed);
+    }
+
+    .unit-card-session {
+      font-size: 11px;
+      color: var(--dimmed);
+      margin-top: 4px;
+    }
+
+    /* Detail Panel View */
+    .detail-panel {
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .back-btn {
+      border: none;
+      padding: 2px 6px;
+    }
+
+    .detail-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .detail-label {
+      font-size: 11px;
+      color: var(--dimmed);
+    }
+
+    .detail-value {
+      font-weight: 500;
+    }
+
+    .detail-rules-block {
+      border: 1px solid var(--border);
+      padding: 8px;
+    }
+
+    /* 6. Planner Grid Canvas Components */
+    .canvas-title {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    .year-block {
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      background-color: var(--bg);
+    }
+
+    .year-header {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 15px;
+      font-weight: bold;
+      background-color: var(--divider);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .year-toggles {
+      display: flex;
+      gap: 12px;
+      font-weight: normal;
+      font-size: 11px;
+    }
+
+    .year-toggles label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .year-grid {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .grid-row {
+      display: flex;
+      border-bottom: 1px solid var(--divider);
+      min-height: 96px;
+    }
+
+    .grid-row:last-child {
+      border-bottom: none;
+    }
+
+    .row-label {
+      width: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 12px;
+      border-right: 1px solid var(--border);
+      background-color: var(--bg);
+      flex-shrink: 0;
+    }
+
+    /* Row slots: Treated as dropping targets. Dynamic wrap layout. */
+    .row-slots {
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      flex-grow: 1;
+      padding: 8px;
+      gap: 8px;
+      background-color: var(--bg);
+      border: 1px dashed transparent;
+      min-height: 80px;
+    }
+
+    /* Empty state placeholder helper */
+    .row-slots:empty::after {
+      content: "Drop units here";
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: var(--dimmed);
+      font-size: 11px;
+    }
+
+    .row-slots.highlight {
+      border: 1px dashed var(--border);
+    }
+
+    .row-slots.disabled {
+      opacity: 0.4;
+      border: 1px dashed var(--divider);
+    }
+
+    /* Placed Unit Card */
+    .placed-unit-card {
+      width: calc(25% - 6px); /* Dynamic wrap: exactly 4 per row width */
+      height: 78px;
+      border: 1px solid var(--border);
+      background-color: var(--card-bg);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .placed-unit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+    }
+
+    .placed-unit-code {
+      font-weight: bold;
+    }
+
+    .remove-unit-btn {
+      border: none;
+      padding: 0 4px;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .remove-unit-btn:hover {
+      background-color: var(--divider);
+    }
+
+    .placed-unit-details {
+      font-size: 10px;
+      color: var(--dimmed);
+    }
+
+    /* Warning Badge */
+    .warning-badge {
+      font-size: 9px;
+      border: 1px solid var(--warning-border);
+      background-color: var(--warning-bg);
+      color: var(--text);
+      padding: 1px 3px;
+      margin-top: 2px;
+      width: fit-content;
+    }
+
+    /* Utility Classes */
+    .d-none {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header>
+    <div class="logo">Course Planner</div>
+    
+    <div class="top-controls">
+      <!-- Updates alert -->
+      <div class="updates-indicator">Updates: Up to date</div>
+
+      <!-- Mode Switcher -->
+      <div class="mode-toggle-group">
+        <button id="mode-free-btn" class="mode-btn active" onclick="setMode('free')">Free</button>
+        <button id="mode-struct-btn" class="mode-btn" onclick="setMode('struct')">Struct</button>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="tab-group">
+        <button class="tab-btn active">Main</button>
+        <button class="tab-btn">Cre</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Workspace split -->
+  <div class="workspace">
+
+    <!-- Left Sidebar: Default view shows Search panel -->
+    <div class="left-sidebar" ondrop="dropBack(event)" ondragover="allowDropBack(event)">
+      
+      <!-- Panel 1: Search panel (Default) -->
+      <div id="search-panel" class="panel">
+        <div class="panel-header">Search Units</div>
+        
+        <div class="search-box">
+          <div class="search-row">
+            <input type="text" id="search-input" placeholder="Search by code or title..." oninput="handleSearch()">
+            <button onclick="handleSearch()">Search</button>
+          </div>
+          
+          <div class="filter-row">
+            <select id="table-filter" onchange="handleSearch()">
+              <option value="all">All Tables</option>
+              <option value="science">Table A - Science</option>
+              <option value="engineering">Table A - Engineering</option>
+              <option value="shared">Table S</option>
+              <option value="ole">Table O</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="search-results-list" id="search-results">
+          <!-- Static mock search results -->
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="COMP2123" onclick="showDetails('COMP2123')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">COMP2123</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Data Structures and Algorithms</div>
+            <div class="unit-card-session">Sessions: Sem 1 / Sem 2</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="COMP2017" onclick="showDetails('COMP2017')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">COMP2017</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Systems Programming</div>
+            <div class="unit-card-session">Sessions: Sem 1 / Sem 2</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="INFO1110" onclick="showDetails('INFO1110')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">INFO1110</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Introduction to Programming</div>
+            <div class="unit-card-session">Sessions: Sem 1 / Sem 2 / S1CIJA</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="MATH1021" onclick="showDetails('MATH1021')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">MATH1021</span>
+              <span>3 CP</span>
+            </div>
+            <div class="unit-card-title">Calculus of One Variable</div>
+            <div class="unit-card-session">Sessions: Sem 1 / Summer</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="COMP2022" onclick="showDetails('COMP2022')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">COMP2022</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Formal Languages and Logic</div>
+            <div class="unit-card-session">Sessions: Sem 1</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="COMP3027" onclick="showDetails('COMP3027')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">COMP3027</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Algorithm Design</div>
+            <div class="unit-card-session">Sessions: Sem 1</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="COMP3888" onclick="showDetails('COMP3888')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">COMP3888</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Software Development Project</div>
+            <div class="unit-card-session">Sessions: Sem 1 / Sem 2</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="OLEO1203" onclick="showDetails('OLEO1203')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">OLEO1203</span>
+              <span>2 CP</span>
+            </div>
+            <div class="unit-card-title">Astrobiology: Life in the Universe</div>
+            <div class="unit-card-session">Sessions: Sem 1 / January Intensive</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="OLEO5901" onclick="showDetails('OLEO5901')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">OLEO5901</span>
+              <span>0 CP</span>
+            </div>
+            <div class="unit-card-title">Qualitative Research for Law and Policy</div>
+            <div class="unit-card-session">Sessions: Sem 2 / July Intensive</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="MKTG1001" onclick="showDetails('MKTG1001')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">MKTG1001</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Marketing Principles</div>
+            <div class="unit-card-session">Sessions: Sem 1 / Sem 2 / Summer</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="ECMT1010" onclick="showDetails('ECMT1010')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">ECMT1010</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Introduction to Economic Statistics</div>
+            <div class="unit-card-session">Sessions: Sem 1 / Sem 2</div>
+          </div>
+
+          <div class="unit-card" draggable="true" ondragstart="drag(event)" id="ISYS2140" onclick="showDetails('ISYS2140')">
+            <div class="unit-card-header">
+              <span class="unit-card-code">ISYS2140</span>
+              <span>6 CP</span>
+            </div>
+            <div class="unit-card-title">Information Systems for Business</div>
+            <div class="unit-card-session">Sessions: Sem 2</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Detail panel (Hidden by default) -->
+      <div id="detail-panel" class="panel d-none">
+        <div class="detail-header">
+          <button class="back-btn" onclick="hideDetails()">←</button>
+          <div class="logo" id="detail-header-code">COMP2123</div>
+        </div>
+        
+        <div class="detail-panel">
+          <div>
+            <div class="detail-title" id="detail-title-text">Data Structures and Algorithms</div>
+            <div class="detail-label" id="detail-table-text">Table A - Science / Computer Science</div>
+          </div>
+
+          <div class="detail-fields">
+            <div>
+              <div class="detail-label">Availability</div>
+              <div class="detail-value" id="detail-avail-text">Semester 1, Semester 2</div>
+            </div>
+            <div>
+              <div class="detail-label">Credit points</div>
+              <div class="detail-value" id="detail-cp-text">6 credit points</div>
+            </div>
+            <div>
+              <div class="detail-label">Delivery & modes</div>
+              <div class="detail-value">On-campus (Camperdown)</div>
+            </div>
+          </div>
+
+          <div class="detail-rules">
+            <div class="detail-label">Rules</div>
+            <div class="detail-rules-block">
+              <strong>Prereq:</strong> <span id="detail-prereq-text">INFO1110 OR INFO1910</span>
+            </div>
+            <div class="detail-rules-block">
+              <strong>Prohibitions:</strong> <span id="detail-prohibit-text">COMP2823</span>
+            </div>
+          </div>
+
+          <div class="detail-fields">
+            <a href="#" id="detail-link" class="detail-value" style="text-decoration: underline;" target="_blank">Handbook link →</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Center Canvas: Year Grid block -->
+    <div class="planner-canvas">
+      <div class="canvas-title">Degree Plan Grid</div>
+
+      <!-- Year 1 -->
+      <div class="year-block">
+        <div class="year-header">
+          <span>Year 1</span>
+          <div class="year-toggles">
+            <label><input type="checkbox" id="y1-summ-cb" onchange="toggleTermRow('y1', 'summ')"> Summ</label>
+            <label><input type="checkbox" id="y1-sem1-cb" checked onchange="toggleTermRow('y1', 'sem1')"> Sem 1</label>
+            <label><input type="checkbox" id="y1-wint-cb" onchange="toggleTermRow('y1', 'wint')"> Wint</label>
+            <label><input type="checkbox" id="y1-sem2-cb" checked onchange="toggleTermRow('y1', 'sem2')"> Sem 2</label>
+          </div>
+        </div>
+        <div class="year-grid">
+          
+          <!-- Summer Intensive row (Hidden by default) -->
+          <div class="grid-row d-none" id="y1-summ-row">
+            <div class="row-label">Summer</div>
+            <div class="row-slots" ondrop="drop(event, 'y1', 'summ')" ondragover="allowDrop(event, 'summ')"></div>
+          </div>
+
+          <!-- Semester 1 row -->
+          <div class="grid-row" id="y1-sem1-row">
+            <div class="row-label">Semester 1</div>
+            <div class="row-slots" ondrop="drop(event, 'y1', 'sem1')" ondragover="allowDrop(event, 'sem1')"></div>
+          </div>
+
+          <!-- Winter Intensive row (Hidden by default) -->
+          <div class="grid-row d-none" id="y1-wint-row">
+            <div class="row-label">Winter</div>
+            <div class="row-slots" ondrop="drop(event, 'y1', 'wint')" ondragover="allowDrop(event, 'wint')"></div>
+          </div>
+
+          <!-- Semester 2 row -->
+          <div class="grid-row" id="y1-sem2-row">
+            <div class="row-label">Semester 2</div>
+            <div class="row-slots" ondrop="drop(event, 'y1', 'sem2')" ondragover="allowDrop(event, 'sem2')"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Year 2 -->
+      <div class="year-block">
+        <div class="year-header">
+          <span>Year 2</span>
+          <div class="year-toggles">
+            <label><input type="checkbox" id="y2-summ-cb" onchange="toggleTermRow('y2', 'summ')"> Summ</label>
+            <label><input type="checkbox" id="y2-sem1-cb" checked onchange="toggleTermRow('y2', 'sem1')"> Sem 1</label>
+            <label><input type="checkbox" id="y2-wint-cb" onchange="toggleTermRow('y2', 'wint')"> Wint</label>
+            <label><input type="checkbox" id="y2-sem2-cb" checked onchange="toggleTermRow('y2', 'sem2')"> Sem 2</label>
+          </div>
+        </div>
+        <div class="year-grid">
+          
+          <!-- Summer Intensive row (Hidden by default) -->
+          <div class="grid-row d-none" id="y2-summ-row">
+            <div class="row-label">Summer</div>
+            <div class="row-slots" ondrop="drop(event, 'y2', 'summ')" ondragover="allowDrop(event, 'summ')"></div>
+          </div>
+
+          <!-- Semester 1 row -->
+          <div class="grid-row" id="y2-sem1-row">
+            <div class="row-label">Semester 1</div>
+            <div class="row-slots" ondrop="drop(event, 'y2', 'sem1')" ondragover="allowDrop(event, 'sem1')"></div>
+          </div>
+
+          <!-- Winter Intensive row (Hidden by default) -->
+          <div class="grid-row d-none" id="y2-wint-row">
+            <div class="row-label">Winter</div>
+            <div class="row-slots" ondrop="drop(event, 'y2', 'wint')" ondragover="allowDrop(event, 'wint')"></div>
+          </div>
+
+          <!-- Semester 2 row -->
+          <div class="grid-row" id="y2-sem2-row">
+            <div class="row-label">Semester 2</div>
+            <div class="row-slots" ondrop="drop(event, 'y2', 'sem2')" ondragover="allowDrop(event, 'sem2')"></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Sidebar: System Utilities -->
+    <div class="right-sidebar">
+      <!-- Native Light/Dark Mode Toggle -->
+      <button class="vertical-btn" onclick="toggleTheme()" id="theme-btn">Dark</button>
+
+      <button class="vertical-btn" style="margin-top: auto;" onclick="alert('Save functionality mockup')">Save</button>
+      <button class="vertical-btn" onclick="alert('Load functionality mockup')">Load</button>
+    </div>
+
+  </div>
+
+  <script>
+    // Global Planner State
+    let activeMode = 'free'; // 'free' or 'struct'
+    const unitsDb = {
+      "COMP2123": {
+        code: "COMP2123",
+        title: "Data Structures and Algorithms",
+        cp: 6,
+        table: "Table A - Science / Computer Science",
+        avail: ["sem1", "sem2"],
+        availText: "Semester 1, Semester 2",
+        prereq: "INFO1110 OR INFO1910",
+        prohibit: "COMP2823",
+        url: "https://www.sydney.edu.au/units/COMP2123"
+      },
+      "COMP2017": {
+        code: "COMP2017",
+        title: "Systems Programming",
+        cp: 6,
+        table: "Table A - Engineering / Software Engineering",
+        avail: ["sem1", "sem2"],
+        availText: "Semester 1, Semester 2",
+        prereq: "INFO1110 OR INFO1113",
+        prohibit: "COMP2817",
+        url: "https://www.sydney.edu.au/units/COMP2017"
+      },
+      "INFO1110": {
+        code: "INFO1110",
+        title: "Introduction to Programming",
+        cp: 6,
+        table: "Table S - Shared Pool",
+        avail: ["sem1", "sem2", "summ"], // S1CIJA maps to Summ
+        availText: "Semester 1, Semester 2, January Intensive (S1CIJA)",
+        prereq: "None",
+        prohibit: "INFO1910",
+        url: "https://www.sydney.edu.au/units/INFO1110"
+      },
+      "MATH1021": {
+        code: "MATH1021",
+        title: "Calculus of One Variable",
+        cp: 3,
+        table: "Table A - Science / Mathematics",
+        avail: ["sem1", "summ"], // Summer maps to Summ
+        availText: "Semester 1, Summer Intensive",
+        prereq: "HSC Mathematics Extension 1",
+        prohibit: "MATH1001",
+        url: "https://www.sydney.edu.au/units/MATH1021"
+      },
+      "COMP2022": {
+        code: "COMP2022",
+        title: "Formal Languages and Logic",
+        cp: 6,
+        table: "Table A - Science / Computer Science",
+        avail: ["sem1"],
+        availText: "Semester 1",
+        prereq: "INFO1110 OR INFO1910",
+        prohibit: "None",
+        url: "https://www.sydney.edu.au/units/COMP2022"
+      },
+      "COMP3027": {
+        code: "COMP3027",
+        title: "Algorithm Design",
+        cp: 6,
+        table: "Table A - Science / Computer Science",
+        avail: ["sem1"],
+        availText: "Semester 1",
+        prereq: "COMP2123 OR COMP2823",
+        prohibit: "None",
+        url: "https://www.sydney.edu.au/units/COMP3027"
+      },
+      "COMP3888": {
+        code: "COMP3888",
+        title: "Software Development Project",
+        cp: 6,
+        table: "Table A - Engineering / Software Engineering",
+        avail: ["sem1", "sem2"],
+        availText: "Semester 1, Semester 2",
+        prereq: "COMP2123 AND (COMP2017 OR COMP2117)",
+        prohibit: "None",
+        url: "https://www.sydney.edu.au/units/COMP3888"
+      },
+      "OLEO1203": {
+        code: "OLEO1203",
+        title: "Astrobiology: Life in the Universe",
+        cp: 2,
+        table: "Table O - Open Learning Environment",
+        avail: ["sem1", "summ"],
+        availText: "Semester 1, January Intensive (S1CIJA)",
+        prereq: "None",
+        prohibit: "None",
+        url: "https://www.sydney.edu.au/units/OLEO1203"
+      },
+      "OLEO5901": {
+        code: "OLEO5901",
+        title: "Qualitative Research for Law and Policy",
+        cp: 0,
+        table: "Table O - Open Learning Environment",
+        avail: ["sem2", "wint"],
+        availText: "Semester 2, July Intensive (S2CIJL)",
+        prereq: "None",
+        prohibit: "None",
+        url: "https://www.sydney.edu.au/units/OLEO5901"
+      },
+      "MKTG1001": {
+        code: "MKTG1001",
+        title: "Marketing Principles",
+        cp: 6,
+        table: "Table S - Shared Pool",
+        avail: ["sem1", "sem2", "summ"],
+        availText: "Semester 1, Semester 2, Summer Intensive",
+        prereq: "None",
+        prohibit: "None",
+        url: "https://www.sydney.edu.au/units/MKTG1001"
+      },
+      "ECMT1010": {
+        code: "ECMT1010",
+        title: "Introduction to Economic Statistics",
+        cp: 6,
+        table: "Table S - Shared Pool",
+        avail: ["sem1", "sem2"],
+        availText: "Semester 1, Semester 2",
+        prereq: "None",
+        prohibit: "None",
+        url: "https://www.sydney.edu.au/units/ECMT1010"
+      },
+      "ISYS2140": {
+        code: "ISYS2140",
+        title: "Information Systems for Business",
+        cp: 6,
+        table: "Table A - Engineering / Information Systems",
+        avail: ["sem2"],
+        availText: "Semester 2",
+        prereq: "INFO1110 OR INFO1113",
+        prohibit: "None",
+        url: "https://www.sydney.edu.au/units/ISYS2140"
+      }
+    };
+
+    // 1. Toggle Dark/Light Mode
+    function toggleTheme() {
+      const body = document.body;
+      body.classList.toggle('dark-mode');
+      const themeBtn = document.getElementById('theme-btn');
+      themeBtn.innerText = body.classList.contains('dark-mode') ? 'Light' : 'Dark';
+    }
+
+    // 2. Set Planning Mode
+    function setMode(mode) {
+      activeMode = mode;
+      document.getElementById('mode-free-btn').classList.toggle('active', mode === 'free');
+      document.getElementById('mode-struct-btn').classList.toggle('active', mode === 'struct');
+    }
+
+    // 3. Toggle Teaching Period Row Visibility (Per-Year)
+    function toggleTermRow(yearId, rowType) {
+      const isChecked = document.getElementById(`${yearId}-${rowType}-cb`).checked;
+      const row = document.getElementById(`${yearId}-${rowType}-row`);
+      if (row) {
+        row.classList.toggle('d-none', !isChecked);
+      }
+    }
+
+    // 4. Detail Panel Triggering
+    function showDetails(unitCode) {
+      const unit = unitsDb[unitCode];
+      if (!unit) return;
+
+      document.getElementById('detail-header-code').innerText = unit.code;
+      document.getElementById('detail-title-text').innerText = unit.title;
+      document.getElementById('detail-table-text').innerText = unit.table;
+      document.getElementById('detail-avail-text').innerText = unit.availText;
+      document.getElementById('detail-cp-text').innerText = `${unit.cp} credit points`;
+      document.getElementById('detail-prereq-text').innerText = unit.prereq;
+      document.getElementById('detail-prohibit-text').innerText = unit.prohibit;
+      document.getElementById('detail-link').href = unit.url;
+
+      document.getElementById('search-panel').classList.add('d-none');
+      document.getElementById('detail-panel').classList.remove('d-none');
+    }
+
+    function hideDetails() {
+      document.getElementById('detail-panel').classList.add('d-none');
+      document.getElementById('search-panel').classList.remove('d-none');
+    }
+
+    // 5. Drag and Drop Actions
+    let draggedUnitCode = null;
+
+    function drag(ev) {
+      draggedUnitCode = ev.target.id;
+      ev.dataTransfer.setData("text", ev.target.id);
+      
+      const unit = unitsDb[draggedUnitCode];
+      if (unit) {
+        document.querySelectorAll('.row-slots').forEach(row => {
+          const rowType = row.closest('.grid-row').id.split('-')[1]; // 'sem1' from 'y1-sem1-row'
+          const isCompatible = unit.avail.includes(rowType);
+          if (isCompatible) {
+            row.classList.add('highlight');
+          } else {
+            row.classList.add('disabled');
+            if (activeMode === 'struct') {
+              row.style.pointerEvents = 'none'; // Lock drop natively
+            }
+          }
+        });
+      }
+    }
+
+    function dragPlaced(ev, originRowId) {
+      const code = ev.target.getAttribute('data-code');
+      draggedUnitCode = code;
+      ev.dataTransfer.setData("text", code);
+      ev.dataTransfer.setData("originRowId", originRowId);
+      ev.dataTransfer.setData("elementId", ev.target.id);
+      
+      const unit = unitsDb[code];
+      if (unit) {
+        document.querySelectorAll('.row-slots').forEach(row => {
+          const rowType = row.closest('.grid-row').id.split('-')[1]; // 'sem1' from 'y1-sem1-row'
+          const isCompatible = unit.avail.includes(rowType);
+          if (isCompatible) {
+            row.classList.add('highlight');
+          } else {
+            row.classList.add('disabled');
+            if (activeMode === 'struct') {
+              row.style.pointerEvents = 'none'; // Lock drop natively
+            }
+          }
+        });
+      }
+    }
+
+    function allowDrop(ev) {
+      ev.preventDefault();
+    }
+
+    function allowDropBack(ev) {
+      ev.preventDefault();
+    }
+
+    function drop(ev, yearId, rowType) {
+      ev.preventDefault();
+      
+      // Clean up highlights, dimming, and pointerEvents
+      document.querySelectorAll('.row-slots').forEach(row => {
+        row.classList.remove('highlight', 'disabled');
+        row.style.pointerEvents = 'auto';
+      });
+
+      const unitCode = ev.dataTransfer.getData("text");
+      const originRowId = ev.dataTransfer.getData("originRowId");
+      const elementId = ev.dataTransfer.getData("elementId");
+      const unit = unitsDb[unitCode];
+      if (!unit) return;
+
+      const isCompatible = unit.avail.includes(rowType);
+      
+      // Struct Mode Enforcement
+      if (activeMode === 'struct' && !isCompatible) {
+        alert(`Blocked: ${unit.code} is not offered in ${rowType === 'sem1' ? 'Semester 1' : rowType === 'sem2' ? 'Semester 2' : rowType}.`);
+        return;
+      }
+
+      const slotContainer = ev.currentTarget; // The row-slots container element
+      if (!slotContainer) return;
+      
+      const targetRowId = slotContainer.closest('.grid-row').id;
+      
+      // If moving within the same row, ignore
+      if (originRowId && originRowId === targetRowId) {
+        return;
+      }
+
+      if (slotContainer.children.length >= 8) {
+        alert("Blocked: Maximum of 8 units allowed per semester.");
+        return;
+      }
+
+      // Check if unit is already in this row to prevent duplicates
+      if (slotContainer.querySelector(`[data-code="${unit.code}"]`)) {
+        alert(`Unit ${unit.code} is already placed in this semester.`);
+        return;
+      }
+
+      // If dragged from another row, remove it from that row first
+      if (originRowId && elementId) {
+        const oldElement = document.getElementById(elementId);
+        if (oldElement) {
+          oldElement.remove();
+        }
+      }
+
+      // Create and append the placed card element
+      const card = document.createElement('div');
+      card.className = 'placed-unit-card';
+      card.id = `placed-${unit.code}-${targetRowId}`;
+      card.setAttribute('data-code', unit.code);
+      card.setAttribute('draggable', 'true');
+      card.ondragstart = (e) => {
+        dragPlaced(e, targetRowId);
+      };
+      card.onclick = (e) => {
+        e.stopPropagation();
+        showDetails(unit.code);
+      };
+      card.innerHTML = `
+        <div class="placed-unit-header">
+          <span class="placed-unit-code">${unit.code}</span>
+          <button class="remove-unit-btn" onclick="event.stopPropagation(); removeUnit(this)">×</button>
+        </div>
+        <div class="placed-unit-details">${unit.cp} CP</div>
+        ${!isCompatible ? '<div class="warning-badge">⚠ Session mismatch</div>' : ''}
+      `;
+      slotContainer.appendChild(card);
+    }
+
+    function dropBack(ev) {
+      ev.preventDefault();
+      
+      // Clean up highlights, dimming, and pointerEvents
+      document.querySelectorAll('.row-slots').forEach(row => {
+        row.classList.remove('highlight', 'disabled');
+        row.style.pointerEvents = 'auto';
+      });
+
+      const originRowId = ev.dataTransfer.getData("originRowId");
+      const elementId = ev.dataTransfer.getData("elementId");
+      if (originRowId && elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.remove();
+        }
+      }
+    }
+
+    function removeUnit(btn) {
+      const card = btn.closest('.placed-unit-card');
+      if (card) {
+        card.remove();
+      }
+    }
+
+    // End of drag handler cleanup
+    document.addEventListener("dragend", () => {
+      document.querySelectorAll('.row-slots').forEach(row => {
+        row.classList.remove('highlight', 'disabled');
+        row.style.pointerEvents = 'auto';
+      });
+    });
+
+    // 6. Simple Search filtering
+    function handleSearch() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const tableFilter = document.getElementById('table-filter').value;
+      const cards = document.querySelectorAll('.search-results-list .unit-card');
+      
+      cards.forEach(card => {
+        const code = card.id.toLowerCase();
+        const unit = unitsDb[card.id];
+        const matchesQuery = code.includes(query) || unit.title.toLowerCase().includes(query);
+        
+        let matchesFilter = true;
+        if (tableFilter !== 'all') {
+          matchesFilter = unit.table.toLowerCase().includes(tableFilter);
+        }
+
+        if (matchesQuery && matchesFilter) {
+          card.classList.remove('d-none');
+        } else {
+          card.classList.add('d-none');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
