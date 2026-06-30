@@ -7,6 +7,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 from typing import Literal, Union, Optional, Any, Dict
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
@@ -14,12 +15,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, TypeAdapter
 from config import DATA_DIR, DEFAULT_TARGET_YEAR
 from parsers.schemas import RuleParseResult, UnitRequirement, CreditPointRequirement, LogicalRequirement
+from api.database import get_db_connection
 
 app = FastAPI(title="USYD Course Planner - Curation Admin Portal")
 
 # Define path references
 PORTAL_YEAR = int(os.getenv("PORTAL_YEAR", DEFAULT_TARGET_YEAR))
-DB_PATH = DATA_DIR / f"parsed_rules_{PORTAL_YEAR}.json"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 RuleExpression = RuleParseResult
@@ -32,53 +33,57 @@ class RuleUpdatePayload(BaseModel):
     needs_curation: bool = Field(description="Indicates if manual curation is still required")
     flagged: bool = Field(default=False, description="Flagged for later manual fix")
 
-def load_rules_db() -> Dict[str, Any]:
-    """Reads parsed rules database from disk."""
-    if not DB_PATH.exists():
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Parsed rules database file not found at {DB_PATH}. Please run parse_rules pipeline first."
-        )
-    try:
-        with open(DB_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to read parsed rules database: {e}"
-        )
+# SQLite endpoints to get rules, update, and get metrics
 
-def save_rules_db(db: Dict[str, Any]):
-    """Writes updated rules database to disk."""
-    try:
-        with open(DB_PATH, "w", encoding="utf-8") as f:
-            json.dump(db, f, indent=2)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to serialize rules database back to disk: {e}"
-        )
-
-# API Endpoints
 @app.get("/api/rules")
 async def get_rules():
-    """Retrieve full database of parsed rules."""
-    return load_rules_db()
+    """Retrieve full database of parsed rules from SQLite."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+        SELECT 
+            u.unit_code, u.title,
+            r.prerequisites_text, r.corequisites_text, r.prohibitions_text, r.assumed_knowledge_text,
+            r.prerequisites_expr, r.corequisites_expr, r.prohibitions_expr,
+            r.needs_curation, r.flagged
+        FROM units u
+        LEFT JOIN unit_rules r ON u.unit_code = r.unit_code
+        """)
+        rows = cursor.fetchall()
+        rules_db = {}
+        for row in rows:
+            code = row["unit_code"]
+            prereq_expr = json.loads(row["prerequisites_expr"]) if row["prerequisites_expr"] else {"type": "none", "rule": None}
+            coreq_expr = json.loads(row["corequisites_expr"]) if row["corequisites_expr"] else {"type": "none", "rule": None}
+            prohib_expr = json.loads(row["prohibitions_expr"]) if row["prohibitions_expr"] else {"type": "none", "rule": None}
+            
+            rules_db[code] = {
+                "unit_code": code,
+                "title": row["title"],
+                "prerequisites_expr": prereq_expr,
+                "corequisites_expr": coreq_expr,
+                "prohibitions_expr": prohib_expr,
+                "needs_curation": bool(row["needs_curation"]),
+                "flagged": bool(row["flagged"]),
+                "raw_rules": {
+                    "prerequisites": row["prerequisites_text"] or "None",
+                    "corequisites": row["corequisites_text"] or "None",
+                    "prohibitions": row["prohibitions_text"] or "None"
+                }
+            }
+        return rules_db
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 @app.post("/api/rules/{unit_code}")
 async def update_unit_rules(unit_code: str, payload: RuleUpdatePayload):
     """
     Validates updated logic expressions against rule schemas, 
-    persists edits back to the parsed rules database, and clears curation flags.
+    persists edits back to SQLite tables, and clears curation flags.
     """
-    db = load_rules_db()
-    
-    if unit_code not in db:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Unit code {unit_code} not found in rules database."
-        )
-
     # 1. Enforce Pydantic validation schemas on input expressions
     ta = TypeAdapter(RuleExpression)
     try:
@@ -91,96 +96,137 @@ async def update_unit_rules(unit_code: str, payload: RuleUpdatePayload):
             detail=f"Rule schema validation failure: {validation_err}"
         )
 
-    # 2. Update record values
-    db[unit_code]["prerequisites_expr"] = payload.prerequisites_expr
-    db[unit_code]["corequisites_expr"] = payload.corequisites_expr
-    db[unit_code]["prohibitions_expr"] = payload.prohibitions_expr
-    db[unit_code]["needs_curation"] = payload.needs_curation
-    db[unit_code]["flagged"] = payload.flagged
-
-    # 3. Serialize back to disk
-    save_rules_db(db)
-    print(f"[{unit_code}] Successfully curated and saved to disk.")
-    
-    return {"status": "success", "message": f"Successfully updated rules for {unit_code}."}
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM units WHERE unit_code = ?", (unit_code,))
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Unit code {unit_code} not found in database."
+            )
+            
+        cursor.execute("""
+        UPDATE unit_rules
+        SET prerequisites_expr = ?,
+            corequisites_expr = ?,
+            prohibitions_expr = ?,
+            needs_curation = ?,
+            flagged = ?
+        WHERE unit_code = ?
+        """, (
+            json.dumps(payload.prerequisites_expr),
+            json.dumps(payload.corequisites_expr),
+            json.dumps(payload.prohibitions_expr),
+            1 if payload.needs_curation else 0,
+            1 if payload.flagged else 0,
+            unit_code
+        ))
+        conn.commit()
+        print(f"[{unit_code}] Successfully curated and saved to SQLite database.")
+        
+        return {"status": "success", "message": f"Successfully updated rules for {unit_code}."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 @app.get("/api/stats")
 async def get_stats():
     """Generates database metrics, validation enums, warnings distribution, and diagnostics."""
-    db = load_rules_db()
-    
-    total_units = len(db)
-    active_units = 0
-    raw_units_path = DATA_DIR / "raw" / "json" / f"parsed_units_{PORTAL_YEAR}.json"
-    if raw_units_path.exists():
-        try:
-            with open(raw_units_path, "r", encoding="utf-8") as f:
-                raw_units = json.load(f)
-                active_units = sum(1 for u in raw_units if u.get("status") == "ACTIVE")
-        except Exception:
-            pass
-            
-    curated_units = sum(1 for entry in db.values() if not entry.get("needs_curation"))
-    needs_curation_units = sum(1 for entry in db.values() if entry.get("needs_curation"))
-    flagged_units = sum(1 for entry in db.values() if entry.get("flagged"))
-    
-    warning_counts = Counter()
-    validity_counts = Counter()
-    subject_counts = defaultdict(lambda: {"total": 0, "needs_curation": 0, "warnings": 0})
-    
-    for code, entry in db.items():
-        subject = code[:4] if len(code) >= 4 and code[:4].isalpha() else "OTHER"
-        subject_counts[subject]["total"] += 1
-        if entry.get("needs_curation"):
-            subject_counts[subject]["needs_curation"] += 1
-            
-        for field in ["prerequisites_expr", "corequisites_expr", "prohibitions_expr"]:
-            expr = entry.get(field, {})
-            if not expr:
-                continue
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # Total units
+        cursor.execute("SELECT COUNT(*) FROM units")
+        total_units = cursor.fetchone()[0]
+        
+        # Active units
+        cursor.execute("SELECT COUNT(*) FROM units WHERE is_active = 1")
+        active_units = cursor.fetchone()[0]
+        
+        # Curated / Needs Curation / Flagged
+        cursor.execute("SELECT COUNT(*) FROM unit_rules WHERE needs_curation = 0")
+        curated_units = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM unit_rules WHERE needs_curation = 1")
+        needs_curation_units = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM unit_rules WHERE flagged = 1")
+        flagged_units = cursor.fetchone()[0]
+        
+        cursor.execute("""
+        SELECT unit_code, prerequisites_expr, corequisites_expr, prohibitions_expr, needs_curation
+        FROM unit_rules
+        """)
+        rows = cursor.fetchall()
+        
+        warning_counts = Counter()
+        validity_counts = Counter()
+        subject_counts = defaultdict(lambda: {"total": 0, "needs_curation": 0, "warnings": 0})
+        
+        for row in rows:
+            code = row["unit_code"]
+            subject = code[:4] if len(code) >= 4 and code[:4].isalpha() else "OTHER"
+            subject_counts[subject]["total"] += 1
+            if row["needs_curation"]:
+                subject_counts[subject]["needs_curation"] += 1
                 
-            warns = expr.get("warnings")
-            if warns:
-                for w in warns:
-                    warning_counts[w] += 1
-                    subject_counts[subject]["warnings"] += 1
+            for field in ["prerequisites_expr", "corequisites_expr", "prohibitions_expr"]:
+                expr_str = row[field]
+                if not expr_str:
+                    continue
+                expr = json.loads(expr_str)
+                
+                warns = expr.get("warnings")
+                if warns:
+                    for w in warns:
+                        warning_counts[w] += 1
+                        subject_counts[subject]["warnings"] += 1
+                        
+                val = expr.get("curation_validity")
+                if val:
+                    validity_counts[val] += 1
                     
-            val = expr.get("curation_validity")
-            if val:
-                validity_counts[val] += 1
+        subject_stats = []
+        for sub, metrics in subject_counts.items():
+            subject_stats.append({
+                "subject": sub,
+                "total": metrics["total"],
+                "needs_curation": metrics["needs_curation"],
+                "warnings_count": metrics["warnings"]
+            })
+        subject_stats.sort(key=lambda x: x["needs_curation"], reverse=True)
+        top_subject_stats = subject_stats[:10]
+        
+        recent_ai_attempts = []
+        log_path = DATA_DIR / "ai_rules_log.json"
+        if log_path.exists():
+            try:
+                with open(log_path, "r", encoding="utf-8") as f:
+                    log_data = json.load(f)
+                    recent_ai_attempts = log_data[-5:]
+            except Exception:
+                pass
                 
-    subject_stats = []
-    for sub, metrics in subject_counts.items():
-        subject_stats.append({
-            "subject": sub,
-            "total": metrics["total"],
-            "needs_curation": metrics["needs_curation"],
-            "warnings_count": metrics["warnings"]
-        })
-    subject_stats.sort(key=lambda x: x["needs_curation"], reverse=True)
-    top_subject_stats = subject_stats[:10]
-    
-    recent_ai_attempts = []
-    log_path = DATA_DIR / "ai_rules_log.json"
-    if log_path.exists():
-        try:
-            with open(log_path, "r", encoding="utf-8") as f:
-                log_data = json.load(f)
-                recent_ai_attempts = log_data[-5:]
-        except Exception:
-            pass
-            
-    return {
-        "total_units": total_units,
-        "active_units": active_units,
-        "curated_units": curated_units,
-        "needs_curation_units": needs_curation_units,
-        "flagged_units": flagged_units,
-        "validity_counts": dict(validity_counts),
-        "warning_counts": dict(warning_counts),
-        "top_subject_stats": top_subject_stats,
-        "recent_ai_attempts": recent_ai_attempts
-    }
+        return {
+            "total_units": total_units,
+            "active_units": active_units,
+            "curated_units": curated_units,
+            "needs_curation_units": needs_curation_units,
+            "flagged_units": flagged_units,
+            "validity_counts": dict(validity_counts),
+            "warning_counts": dict(warning_counts),
+            "top_subject_stats": top_subject_stats,
+            "recent_ai_attempts": recent_ai_attempts
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 # --- Crawler Admin State & Endpoints ---
 crawler_state = {

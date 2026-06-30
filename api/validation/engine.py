@@ -12,23 +12,14 @@ from api.validation.rules import evaluate_rule
 from api.utils import match_wildcard, matches_pattern
 from crawler.config import DATA_DIR, DEFAULT_TARGET_YEAR
 
+from api.database import get_db_connection
+
 # Load the database target year
 TARGET_YEAR = int(os.getenv("PORTAL_YEAR", DEFAULT_TARGET_YEAR))
 
-# Load DBs
+# Load DBs (kept for test mocking capability)
 RULES_DB: Dict[str, Any] = {}
 UOS_METADATA: Dict[str, Any] = {}
-
-rules_db_path = DATA_DIR / f"parsed_rules_{TARGET_YEAR}.json"
-if rules_db_path.exists():
-    with open(rules_db_path, "r", encoding="utf-8") as f:
-        RULES_DB = json.load(f)
-
-parsed_units_path = DATA_DIR / "raw" / "json" / f"parsed_units_{TARGET_YEAR}.json"
-if parsed_units_path.exists():
-    with open(parsed_units_path, "r", encoding="utf-8") as f:
-        for u in json.load(f):
-            UOS_METADATA[u["unit_code"]] = u
 
 # Cache the availability list to avoid re-parsing HTML repeatedly
 AVAILABILITY_CACHE: Dict[str, List[str]] = {}
@@ -37,63 +28,57 @@ def get_availability(unit_code: str) -> List[str]:
     if unit_code in AVAILABILITY_CACHE:
         return AVAILABILITY_CACHE[unit_code]
         
-    # Check if we have it in HTML
-    html_path = DATA_DIR / "raw" / "html" / str(TARGET_YEAR) / f"{unit_code}.html"
-    from bs4 import BeautifulSoup
-    
-    if not html_path.exists():
-        # Fallback to metadata if any, or default
-        avail = UOS_METADATA.get(unit_code, {}).get("avail", ["sem1", "sem2"])
-        AVAILABILITY_CACHE[unit_code] = avail
-        return avail
-        
+    conn = get_db_connection()
     try:
-        with open(html_path, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f.read(), "html.parser")
-            
-        status_div = soup.find(id="status")
-        if status_div and status_div.text.strip() == "DISCONTINUED":
-            AVAILABILITY_CACHE[unit_code] = []
-            return []
-            
+        cursor = conn.cursor()
+        cursor.execute("SELECT session_code, session_text FROM unit_availabilities WHERE unit_code = ?", (unit_code,))
+        rows = cursor.fetchall()
+        if not rows:
+            # Fallback to UOS_METADATA mock if present
+            mock_avail = UOS_METADATA.get(unit_code, {}).get("avail")
+            if mock_avail:
+                AVAILABILITY_CACHE[unit_code] = mock_avail
+                return mock_avail
+            AVAILABILITY_CACHE[unit_code] = ["sem1", "sem2"]
+            return ["sem1", "sem2"]
+        
         sessions = set()
-        for table in soup.find_all("table"):
-            headers = [th.text.strip().lower() for th in table.find_all(["th", "td"])]
-            if not headers or "session" not in headers[0]:
-                continue
-                
-            for tr in table.find_all("tr")[1:]:
-                cells = [td.text.strip() for td in tr.find_all(["td", "th"])]
-                if not cells:
-                    continue
-                session_text = cells[0]
-                if str(TARGET_YEAR) in session_text:
-                    s_lower = session_text.lower()
-                    if "semester 1" in s_lower or "s1" in s_lower or "january" in s_lower or "february" in s_lower or "march" in s_lower or "april" in s_lower or "may" in s_lower:
-                        if "january" in s_lower or "february" in s_lower or "summer" in s_lower:
-                            sessions.add("summ")
-                        else:
-                            sessions.add("sem1")
-                    elif "semester 2" in s_lower or "s2" in s_lower or "july" in s_lower or "august" in s_lower or "september" in s_lower or "october" in s_lower or "november" in s_lower or "december" in s_lower:
-                        if "july" in s_lower or "winter" in s_lower:
-                            sessions.add("wint")
-                        else:
-                            sessions.add("sem2")
-                    elif "winter" in s_lower or "june" in s_lower:
-                        sessions.add("wint")
-                    elif "summer" in s_lower:
-                        sessions.add("summ")
-                        
-        if not sessions:
-            avail = ["sem1", "sem2"]
-        else:
-            avail = sorted(list(sessions))
-            
+        for row in rows:
+            sess_code = row["session_code"]
+            s_lower = sess_code.lower()
+            if s_lower == "s1":
+                sessions.add("sem1")
+            elif s_lower == "s2":
+                sessions.add("sem2")
+            elif s_lower == "summer" or s_lower in ("s1cija", "s1cife"):
+                sessions.add("summ")
+            elif s_lower == "winter" or s_lower in ("s1cijn", "s2cijl"):
+                sessions.add("wint")
+            elif s_lower in ("s1cima", "s1ciap", "s1cimy"):
+                sessions.add("sem1")
+            elif s_lower in ("s2ciau", "s2cise", "s2cioc", "s2cinv", "s2cide"):
+                sessions.add("sem2")
+            else:
+                s_text_lower = row["session_text"].lower()
+                if "semester 1" in s_text_lower:
+                    sessions.add("sem1")
+                elif "semester 2" in s_text_lower:
+                    sessions.add("sem2")
+                elif "winter" in s_text_lower or "june" in s_text_lower or "july" in s_text_lower:
+                    sessions.add("wint")
+                elif "summer" in s_text_lower or "january" in s_text_lower or "february" in s_text_lower:
+                    sessions.add("summ")
+        
+        avail = sorted(list(sessions)) if sessions else ["sem1", "sem2"]
         AVAILABILITY_CACHE[unit_code] = avail
         return avail
     except Exception:
-        AVAILABILITY_CACHE[unit_code] = ["sem1", "sem2"]
         return ["sem1", "sem2"]
+    finally:
+        conn.close()
+
+# Save a reference to the original function for mock-detection
+_original_get_availability = get_availability
 
 def run_validation(request: ValidationRequest) -> ValidationResponse:
     warnings = []
@@ -113,6 +98,151 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
         
     completed_units = set()
     
+    # Pre-fetch details from SQLite in 2 sweeps
+    local_uos_metadata = {}
+    local_rules_db = {}
+    local_availabilities = {}
+    
+    # If mocked globally by test fixtures, use the mocks
+    if UOS_METADATA:
+        for k, v in UOS_METADATA.items():
+            local_uos_metadata[k] = v
+    if RULES_DB:
+        for k, v in RULES_DB.items():
+            local_rules_db[k] = v
+            
+    # Identify which codes need to be fetched from SQLite
+    codes_to_fetch = [code for code in all_planned_units if (code not in local_uos_metadata or code not in local_rules_db)]
+    
+    if codes_to_fetch:
+        placeholders = ", ".join("?" for _ in codes_to_fetch)
+        conn = get_db_connection()
+        try:
+            # Query Sweep 1: Units + Rules
+            query1 = f"""
+            SELECT 
+                u.unit_code, u.title, u.credit_points, u.level, u.faculty, u.handbook_url, u.is_active, u.replaced_by_code,
+                r.prerequisites_text, r.corequisites_text, r.prohibitions_text, r.assumed_knowledge_text,
+                r.prerequisites_expr, r.corequisites_expr, r.prohibitions_expr, r.needs_curation, r.flagged
+            FROM units u
+            LEFT JOIN unit_rules r ON u.unit_code = r.unit_code
+            WHERE u.unit_code IN ({placeholders})
+            """
+            cursor = conn.cursor()
+            cursor.execute(query1, list(codes_to_fetch))
+            rows1 = cursor.fetchall()
+            
+            for row in rows1:
+                code = row["unit_code"]
+                if code not in local_uos_metadata:
+                    local_uos_metadata[code] = {
+                        "unit_code": code,
+                        "title": row["title"],
+                        "credit_points": row["credit_points"],
+                        "level": "Undergraduate" if row["level"] < 9000 else "Postgraduate",
+                        "academic_unit": row["faculty"],
+                        "prerequisites_text": row["prerequisites_text"] or "None",
+                        "corequisites_text": row["corequisites_text"] or "None",
+                        "prohibitions_text": row["prohibitions_text"] or "None",
+                        "assumed_knowledge_text": row["assumed_knowledge_text"] or "None",
+                        "status": "ACTIVE" if row["is_active"] else "INACTIVE",
+                    }
+                
+                if code not in local_rules_db:
+                    prereq_expr = json.loads(row["prerequisites_expr"]) if row["prerequisites_expr"] else {"type": "none", "rule": None}
+                    coreq_expr = json.loads(row["corequisites_expr"]) if row["corequisites_expr"] else {"type": "none", "rule": None}
+                    prohib_expr = json.loads(row["prohibitions_expr"]) if row["prohibitions_expr"] else {"type": "none", "rule": None}
+                    
+                    local_rules_db[code] = {
+                        "unit_code": code,
+                        "title": row["title"],
+                        "prerequisites_expr": prereq_expr,
+                        "corequisites_expr": coreq_expr,
+                        "prohibitions_expr": prohib_expr,
+                        "needs_curation": bool(row["needs_curation"]),
+                        "flagged": bool(row["flagged"]),
+                        "raw_rules": {
+                            "prerequisites": row["prerequisites_text"] or "None",
+                            "corequisites": row["corequisites_text"] or "None",
+                            "prohibitions": row["prohibitions_text"] or "None",
+                        }
+                    }
+            
+            # Query Sweep 2: Availabilities
+            query2 = f"""
+            SELECT unit_code, session_code, session_text, modes, locations
+            FROM unit_availabilities
+            WHERE unit_code IN ({placeholders})
+            """
+            cursor.execute(query2, list(codes_to_fetch))
+            rows2 = cursor.fetchall()
+            
+            for row in rows2:
+                code = row["unit_code"]
+                sess_code = row["session_code"]
+                
+                term_key = None
+                s_lower = sess_code.lower()
+                if s_lower == "s1":
+                    term_key = "sem1"
+                elif s_lower == "s2":
+                    term_key = "sem2"
+                elif s_lower == "summer" or s_lower in ("s1cija", "s1cife"):
+                    term_key = "summ"
+                elif s_lower == "winter" or s_lower in ("s1cijn", "s2cijl"):
+                    term_key = "wint"
+                elif s_lower in ("s1cima", "s1ciap", "s1cimy"):
+                    term_key = "sem1"
+                elif s_lower in ("s2ciau", "s2cise", "s2cioc", "s2cinv", "s2cide"):
+                    term_key = "sem2"
+                else:
+                    s_text_lower = row["session_text"].lower()
+                    if "semester 1" in s_text_lower:
+                        term_key = "sem1"
+                    elif "semester 2" in s_text_lower:
+                        term_key = "sem2"
+                    elif "winter" in s_text_lower or "june" in s_text_lower or "july" in s_text_lower:
+                        term_key = "wint"
+                    elif "summer" in s_text_lower or "january" in s_text_lower or "february" in s_text_lower:
+                        term_key = "summ"
+                    else:
+                        term_key = "sem1"
+                        
+                if term_key:
+                    local_availabilities.setdefault(code, set()).add(term_key)
+        finally:
+            conn.close()
+            
+    # For any code that still wasn't found in DB, assign standard defaults
+    for code in all_planned_units:
+        if code not in local_uos_metadata:
+            local_uos_metadata[code] = {
+                "unit_code": code,
+                "title": "Unknown Unit",
+                "credit_points": 6,
+                "level": "Undergraduate",
+                "academic_unit": "Unknown",
+                "prerequisites_text": "None",
+                "corequisites_text": "None",
+                "prohibitions_text": "None",
+                "assumed_knowledge_text": "None",
+                "status": "ACTIVE",
+            }
+        if code not in local_rules_db:
+            local_rules_db[code] = {
+                "unit_code": code,
+                "prerequisites_expr": {"type": "none", "rule": None},
+                "corequisites_expr": {"type": "none", "rule": None},
+                "prohibitions_expr": {"type": "none", "rule": None},
+                "needs_curation": False,
+                "flagged": False,
+                "raw_rules": {
+                    "prerequisites": "None",
+                    "corequisites": "None",
+                    "prohibitions": "None",
+                }
+            }
+            
     for placement in sorted_placements:
         year = placement.year
         term = placement.term
@@ -121,7 +251,7 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
         # Check A: Term CP Overload
         term_cp = 0
         for code in codes:
-            cp = UOS_METADATA.get(code, {}).get("credit_points", 6)
+            cp = local_uos_metadata.get(code, {}).get("credit_points", 6)
             term_cp += cp
             
         overload_limit = 12 if term in ["summ", "wint"] else 24
@@ -135,10 +265,14 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
             
         # Check individual UoS rules in the current term block
         for code in codes:
-            unit_rule = RULES_DB.get(code, {})
+            unit_rule = local_rules_db.get(code, {})
             
             # Check B: Session Availability Mismatch
-            avail = get_availability(code)
+            if get_availability is not _original_get_availability:
+                avail = get_availability(code)
+            else:
+                avail = list(local_availabilities.get(code, {"sem1", "sem2"}))
+                
             if term not in avail:
                 warnings.append(WarningDetail(
                     type="session_mismatch",
@@ -151,7 +285,7 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
             # Check C: Prohibitions
             prohib_expr = unit_rule.get("prohibitions_expr")
             if prohib_expr and prohib_expr.get("type") != "none":
-                prohibited_satisfied, prohib_warnings = evaluate_rule(prohib_expr, all_planned_units, UOS_METADATA)
+                prohibited_satisfied, prohib_warnings = evaluate_rule(prohib_expr, all_planned_units, local_uos_metadata)
                 if prohibited_satisfied:
                     warnings.append(WarningDetail(
                         type="prohibited",
@@ -168,7 +302,7 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
             
             if coreq_expr and coreq_expr.get("type") != "none":
                 current_and_completed = completed_units.union(set(codes))
-                satisfied, coreq_warnings = evaluate_rule(coreq_expr, current_and_completed, UOS_METADATA)
+                satisfied, coreq_warnings = evaluate_rule(coreq_expr, current_and_completed, local_uos_metadata)
                 
                 soft_msg = None
                 if coreq_warnings:
@@ -209,7 +343,7 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
             is_unparsed = prereq_expr and (prereq_expr.get("curation_validity") == "needs_manual_review" or prereq_expr.get("type") == "none") and raw_prereq and raw_prereq.strip().lower() not in ["", "none", "none."]
             
             if prereq_expr and prereq_expr.get("type") != "none":
-                satisfied, prereq_warnings = evaluate_rule(prereq_expr, completed_units, UOS_METADATA)
+                satisfied, prereq_warnings = evaluate_rule(prereq_expr, completed_units, local_uos_metadata)
                 
                 soft_msg = None
                 if prereq_warnings:
