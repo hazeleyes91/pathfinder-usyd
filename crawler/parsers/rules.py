@@ -35,19 +35,13 @@ def log_ai_rule_attempt(unit_code: str, field_name: str, text: str, parsed_outpu
         print(f"Failed to write to AI rules log: {e}")
 
 def wrap_and_detect_warnings(raw_text: str, parsed_node: dict, needs_curation: bool) -> dict:
-    if not parsed_node:
-        return {
-            "type": "none", 
-            "rule": None, 
-            "warnings": None, 
-            "curation_validity": CurationValidity.NEEDS_MANUAL_REVIEW
-        }
-        
     warns = []
-    text_lower = raw_text.lower()
+    text_lower = raw_text.lower() if raw_text else ""
     
     # Check words using regex word boundaries at the start to allow prefixes (e.g. "candidat" matches "candidate") while avoiding middle substring matches (e.g. "BHSC" doesn't match "hsc")
     def has_word_match(words: list[str]) -> bool:
+        if not text_lower:
+            return False
         pattern = r'\b(' + '|'.join(re.escape(w) for w in words) + r')'
         return bool(re.search(pattern, text_lower))
     
@@ -56,11 +50,11 @@ def wrap_and_detect_warnings(raw_text: str, parsed_node: dict, needs_curation: b
         warns.append(ParserWarning.DEGREE_RESTRICTION)
         
     # 2. Grade/Performance Thresholds
-    if has_word_match(["wam", "gpa", "mark", "average", "grade", "%", "percent"]):
+    if has_word_match(["wam", "gpa", "mark", "average", "grade", "%", "percent", "distinction", "credit", "pass", "fail"]):
         warns.append(ParserWarning.GRADE_THRESHOLD)
         
     # 3. Academic Level / Year Constraints
-    if has_word_match(["1000", "2000", "3000", "4000", "5000", "level", "intermediate", "senior", "junior", "year"]):
+    if has_word_match(["1000", "2000", "3000", "4000", "5000", "intermediate", "senior", "junior", "year"]) or re.search(r'\blevel \d\b', text_lower):
         warns.append(ParserWarning.LOGIC_SIMPLIFIED)
         
     # 4. Departmental / Instructor Permission
@@ -71,9 +65,9 @@ def wrap_and_detect_warnings(raw_text: str, parsed_node: dict, needs_curation: b
     if has_word_match(["hsc", "assumed", "knowledge", "recommended"]):
         warns.append(ParserWarning.RECOMMENDED_PREPARATION)
         
-    root_type = parsed_node.get("type", "none")
-    rule_content = None if root_type == "none" else parsed_node
     warnings_list = list(set(warns)) if warns else None
+    root_type = parsed_node.get("type", "none") if parsed_node else "none"
+    rule_content = None if root_type == "none" or not parsed_node else parsed_node
     validity = CurationValidity.NEEDS_MANUAL_REVIEW if needs_curation else CurationValidity.VALID_FOR_PLANNING
     
     return {
@@ -94,12 +88,7 @@ async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys:
         
     if regex_only:
         print(f"[{unit_code}] {field_name} is complex — tagged for curation (regex-only mode).")
-        return {
-            "type": "none", 
-            "rule": None, 
-            "warnings": None, 
-            "curation_validity": CurationValidity.NEEDS_MANUAL_REVIEW
-        }, True
+        return wrap_and_detect_warnings(text, None, needs_curation=True), True
 
     # 2. Preprocess Agent (run only if API keys are available)
     if has_keys:
@@ -110,12 +99,7 @@ async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys:
         # Check if preprocessor discarded the rule
         if simplified_text.strip().upper() == "[CURATE]":
             print(f"[{unit_code}] {field_name} discarded by preprocess agent — tagged for curation.")
-            return {
-                "type": "none", 
-                "rule": None, 
-                "warnings": None, 
-                "curation_validity": CurationValidity.NEEDS_MANUAL_REVIEW
-            }, True
+            return wrap_and_detect_warnings(text, None, needs_curation=True), True
             
         # 3. Regex 2
         regex_res2 = parse_rules_with_regex(simplified_text)
@@ -125,12 +109,7 @@ async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys:
             
         if preproc_regex_only:
             print(f"[{unit_code}] {field_name} not matching Regex 2 after preprocessing (preproc-regex-only mode) — tagged for curation.")
-            return {
-                "type": "none", 
-                "rule": None, 
-                "warnings": None, 
-                "curation_validity": CurationValidity.NEEDS_MANUAL_REVIEW
-            }, True
+            return wrap_and_detect_warnings(text, None, needs_curation=True), True
             
         # 4. AI Expert (run on preprocessed text)
         print(f"[{unit_code}] Parsing simplified {field_name} rule using AI Expert: '{simplified_text}'")

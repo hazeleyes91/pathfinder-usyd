@@ -4,6 +4,7 @@ import json
 import time
 import threading
 import sys
+from collections import Counter, defaultdict
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from typing import Literal, Union, Optional, Any, Dict
@@ -102,6 +103,84 @@ async def update_unit_rules(unit_code: str, payload: RuleUpdatePayload):
     print(f"[{unit_code}] Successfully curated and saved to disk.")
     
     return {"status": "success", "message": f"Successfully updated rules for {unit_code}."}
+
+@app.get("/api/stats")
+async def get_stats():
+    """Generates database metrics, validation enums, warnings distribution, and diagnostics."""
+    db = load_rules_db()
+    
+    total_units = len(db)
+    active_units = 0
+    raw_units_path = DATA_DIR / "raw" / "json" / f"parsed_units_{PORTAL_YEAR}.json"
+    if raw_units_path.exists():
+        try:
+            with open(raw_units_path, "r", encoding="utf-8") as f:
+                raw_units = json.load(f)
+                active_units = sum(1 for u in raw_units if u.get("status") == "ACTIVE")
+        except Exception:
+            pass
+            
+    curated_units = sum(1 for entry in db.values() if not entry.get("needs_curation"))
+    needs_curation_units = sum(1 for entry in db.values() if entry.get("needs_curation"))
+    flagged_units = sum(1 for entry in db.values() if entry.get("flagged"))
+    
+    warning_counts = Counter()
+    validity_counts = Counter()
+    subject_counts = defaultdict(lambda: {"total": 0, "needs_curation": 0, "warnings": 0})
+    
+    for code, entry in db.items():
+        subject = code[:4] if len(code) >= 4 and code[:4].isalpha() else "OTHER"
+        subject_counts[subject]["total"] += 1
+        if entry.get("needs_curation"):
+            subject_counts[subject]["needs_curation"] += 1
+            
+        for field in ["prerequisites_expr", "corequisites_expr", "prohibitions_expr"]:
+            expr = entry.get(field, {})
+            if not expr:
+                continue
+                
+            warns = expr.get("warnings")
+            if warns:
+                for w in warns:
+                    warning_counts[w] += 1
+                    subject_counts[subject]["warnings"] += 1
+                    
+            val = expr.get("curation_validity")
+            if val:
+                validity_counts[val] += 1
+                
+    subject_stats = []
+    for sub, metrics in subject_counts.items():
+        subject_stats.append({
+            "subject": sub,
+            "total": metrics["total"],
+            "needs_curation": metrics["needs_curation"],
+            "warnings_count": metrics["warnings"]
+        })
+    subject_stats.sort(key=lambda x: x["needs_curation"], reverse=True)
+    top_subject_stats = subject_stats[:10]
+    
+    recent_ai_attempts = []
+    log_path = DATA_DIR / "ai_rules_log.json"
+    if log_path.exists():
+        try:
+            with open(log_path, "r", encoding="utf-8") as f:
+                log_data = json.load(f)
+                recent_ai_attempts = log_data[-5:]
+        except Exception:
+            pass
+            
+    return {
+        "total_units": total_units,
+        "active_units": active_units,
+        "curated_units": curated_units,
+        "needs_curation_units": needs_curation_units,
+        "flagged_units": flagged_units,
+        "validity_counts": dict(validity_counts),
+        "warning_counts": dict(warning_counts),
+        "top_subject_stats": top_subject_stats,
+        "recent_ai_attempts": recent_ai_attempts
+    }
 
 # --- Crawler Admin State & Endpoints ---
 crawler_state = {

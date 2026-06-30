@@ -84,7 +84,13 @@
     <header class="flex justify-between items-center border-b border-text pb-5 mb-5 shrink-0">
       <div>
         <h1 class="font-extrabold text-[24px] tracking-tight">USYD Course Planner</h1>
-        <p class="text-[13px] text-dim mt-1 font-semibold uppercase tracking-wide">Manual Curation Interface | <a href="/crawler" class="text-text hover:underline cursor-pointer">Crawler Portal</a></p>
+        <p class="text-[13px] text-dim mt-1 font-semibold uppercase tracking-wide flex gap-3 items-center">
+          <button id="tab-curation" class="tab-btn active">Curation Portal</button>
+          <span class="text-dim/40 font-light">|</span>
+          <button id="tab-stats" class="tab-btn">Stats & Analysis</button>
+          <span class="text-dim/40 font-light">|</span>
+          <a href="/crawler" class="text-dim hover:text-text hover:underline cursor-pointer font-bold text-[13px]">Crawler Portal</a>
+        </p>
       </div>
       
       <!-- Stats Panel -->
@@ -108,32 +114,121 @@
       </div>
     </header>
 
-    <!-- Controls Section -->
-    <section class="flex justify-between items-center gap-6 mb-5 shrink-0">
-      <div class="relative flex-grow max-w-[600px]">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-dim text-[14px]">🔍</span>
-        <input type="text" id="search-input" placeholder="Search by unit code or title..." autocomplete="off" class="w-full bg-bg border border-dim text-text px-4 py-2 pl-10 text-[14px] font-semibold outline-none hover:border-text focus:border-text">
-      </div>
-      
-      <div class="flex items-center gap-4">
-        <span class="text-[13px] font-extrabold text-dim uppercase tracking-wide">Filter:</span>
-        <div class="flex border border-text p-1">
-          <button class="filter-pill active" data-filter="all">All</button>
-          <button class="filter-pill" data-filter="pending">Needs Curation</button>
-          <button class="filter-pill" data-filter="curated">Curated</button>
-          <button class="filter-pill" data-filter="flagged">Flagged</button>
+    <!-- Curation View Container -->
+    <div id="curation-view" class="flex flex-col grow overflow-hidden">
+      <!-- Controls Section -->
+      <section class="flex justify-between items-center gap-6 mb-5 shrink-0">
+        <div class="relative flex-grow max-w-[600px]">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-dim text-[14px]">🔍</span>
+          <input type="text" id="search-input" placeholder="Search by unit code or title..." autocomplete="off" class="w-full bg-bg border border-dim text-text px-4 py-2 pl-10 text-[14px] font-semibold outline-none hover:border-text focus:border-text">
         </div>
-        <button onclick="document.body.classList.toggle('dark-mode')" class="text-[12px] uppercase font-bold border border-dim px-3 py-1.5 ml-2 hover:bg-text hover:text-bg">Theme</button>
-      </div>
-    </section>
+        
+        <div class="flex items-center gap-4">
+          <span class="text-[13px] font-extrabold text-dim uppercase tracking-wide">Filter:</span>
+          <div class="flex border border-text p-1">
+            <button class="filter-pill active" data-filter="all">All</button>
+            <button class="filter-pill" data-filter="pending">Needs Curation</button>
+            <button class="filter-pill" data-filter="curated">Curated</button>
+            <button class="filter-pill" data-filter="flagged">Flagged</button>
+          </div>
+          <button onclick="document.body.classList.toggle('dark-mode')" class="text-[12px] uppercase font-bold border border-dim px-3 py-1.5 ml-2 hover:bg-text hover:text-bg">Theme</button>
+        </div>
+      </section>
 
-    <!-- Rules Grid Section -->
-    <main class="grow overflow-y-auto pr-2">
-      <div class="flex flex-col gap-6" id="rules-grid">
-        <!-- Cards injected via JS -->
-        <div class="text-center py-20 text-[16px] font-semibold text-dim">Loading unit of study rules...</div>
-      </div>
-    </main>
+      <!-- Rules Grid Section -->
+      <main class="grow overflow-y-auto pr-2">
+        <div class="flex flex-col gap-6" id="rules-grid">
+          <!-- Cards injected via JS -->
+          <div class="text-center py-20 text-[16px] font-semibold text-dim">Loading unit of study rules...</div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Stats & Analysis View Container -->
+    <div id="stats-view" class="hidden flex-col grow overflow-y-auto pr-2 gap-8">
+      <!-- Overview Numbers -->
+      <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="border border-text p-4 bg-block flex flex-col justify-between">
+          <span class="text-[11px] font-extrabold text-dim uppercase tracking-wider">Total Handled</span>
+          <span class="text-3xl font-black mt-2" id="dash-total">0</span>
+        </div>
+        <div class="border border-text p-4 bg-block flex flex-col justify-between">
+          <span class="text-[11px] font-extrabold text-dim uppercase tracking-wider">Active Units</span>
+          <span class="text-3xl font-black mt-2 text-text" id="dash-active">0</span>
+        </div>
+        <div class="border border-text p-4 bg-block flex flex-col justify-between">
+          <span class="text-[11px] font-extrabold text-dim uppercase tracking-wider">Curated Count</span>
+          <span class="text-3xl font-black mt-2 text-text" id="dash-curated">0</span>
+        </div>
+        <div class="border border-text p-4 bg-block flex flex-col justify-between">
+          <span class="text-[11px] font-extrabold text-dim uppercase tracking-wider">Needs Curation</span>
+          <span class="text-3xl font-black mt-2 text-warn-pre" id="dash-pending">0</span>
+        </div>
+        <div class="border border-text p-4 bg-block flex flex-col justify-between">
+          <span class="text-[11px] font-extrabold text-dim uppercase tracking-wider">Flagged Units</span>
+          <span class="text-3xl font-black mt-2" id="dash-flagged">0</span>
+        </div>
+      </section>
+
+      <!-- Middle Grid: Validity & Warnings -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Validity status -->
+        <div class="border border-text p-5 flex flex-col">
+          <h3 class="text-[14px] font-extrabold uppercase tracking-wide border-b border-text pb-2 mb-3">Curation Validity Distribution</h3>
+          <div class="flex flex-col gap-3 font-mono text-[13px]">
+            <div class="flex justify-between py-1 border-b border-block">
+              <span>Valid For Planning:</span>
+              <span class="font-bold text-text" id="validity-planning">0</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-block">
+              <span>Needs Manual Review:</span>
+              <span class="font-bold text-warn-pre" id="validity-review">0</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-block">
+              <span>Blocked By Curator:</span>
+              <span class="font-bold" id="validity-blocked">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Parser warnings -->
+        <div class="border border-text p-5 flex flex-col">
+          <h3 class="text-[14px] font-extrabold uppercase tracking-wide border-b border-text pb-2 mb-3">Ignored / Bypassed Constraints</h3>
+          <div class="flex flex-col gap-2 font-mono text-[13px]" id="warnings-list-container">
+            <!-- Warnings loaded dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Bottom Grid: Subject areas & AI parse log -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
+        <!-- Top Subject Backlog -->
+        <div class="border border-text p-5 flex flex-col">
+          <h3 class="text-[14px] font-extrabold uppercase tracking-wide border-b border-text pb-2 mb-3">Top Subject Backlogs</h3>
+          <table class="w-full text-left font-mono text-[13px]">
+            <thead>
+              <tr class="border-b border-text pb-1 text-dim text-[11px] uppercase font-extrabold">
+                <th class="py-1">Subject</th>
+                <th class="py-1 text-right">Total</th>
+                <th class="py-1 text-right">Pending</th>
+                <th class="py-1 text-right">Warnings</th>
+              </tr>
+            </thead>
+            <tbody id="subject-table-body">
+              <!-- Loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- AI Diagnostic Log -->
+        <div class="border border-text p-5 flex flex-col">
+          <h3 class="text-[14px] font-extrabold uppercase tracking-wide border-b border-text pb-2 mb-3">Recent AI Parse Diagnostic Logs</h3>
+          <div class="flex flex-col gap-4 overflow-y-auto max-h-[300px] pr-2" id="ai-logs-container">
+            <!-- AI Logs loaded dynamically -->
+          </div>
+        </div>
+      </section>
+    </div>
 
   </div>
 

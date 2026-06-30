@@ -130,10 +130,12 @@ function updateStats() {
 function setupEventListeners() {
     // Search input handler
     const searchInput = document.getElementById("search-input");
-    searchInput.addEventListener("input", (e) => {
-        searchQuery = e.target.value.toLowerCase().trim();
-        renderGrid();
-    });
+    if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            renderGrid();
+        });
+    }
 
     // Filter pills handler
     const pills = document.querySelectorAll(".filter-pill");
@@ -145,6 +147,31 @@ function setupEventListeners() {
             renderGrid();
         });
     });
+
+    // Tab switching handler
+    const tabCuration = document.getElementById("tab-curation");
+    const tabStats = document.getElementById("tab-stats");
+    const curationView = document.getElementById("curation-view");
+    const statsView = document.getElementById("stats-view");
+    
+    if (tabCuration && tabStats && curationView && statsView) {
+        tabCuration.addEventListener("click", () => {
+            tabCuration.classList.add("active");
+            tabStats.classList.remove("active");
+            curationView.classList.remove("hidden");
+            statsView.classList.add("hidden");
+            updateStats();
+            renderGrid();
+        });
+        
+        tabStats.addEventListener("click", () => {
+            tabStats.classList.add("active");
+            tabCuration.classList.remove("active");
+            curationView.classList.add("hidden");
+            statsView.classList.remove("hidden");
+            loadAndRenderStats();
+        });
+    }
 }
 
 // Renders the responsive rules list
@@ -445,4 +472,106 @@ async function syncUnitWithServer(unitCode) {
     });
 
     return response.ok;
+}
+
+// Fetch stats from backend and populate Stats View
+async function loadAndRenderStats() {
+    if (!isLiveMode) {
+        document.getElementById("dash-total").innerText = Object.keys(rulesDatabase).length;
+        document.getElementById("dash-active").innerText = Object.keys(rulesDatabase).length;
+        document.getElementById("dash-curated").innerText = Object.values(rulesDatabase).filter(u => !u.needs_curation).length;
+        document.getElementById("dash-pending").innerText = Object.values(rulesDatabase).filter(u => u.needs_curation).length;
+        document.getElementById("dash-flagged").innerText = Object.values(rulesDatabase).filter(u => u.flagged).length;
+        return;
+    }
+    
+    try {
+        const res = await fetch("/api/stats");
+        if (!res.ok) throw new Error("Stats API error");
+        const data = await res.json();
+        
+        // 1. Overview Cards
+        document.getElementById("dash-total").innerText = data.total_units;
+        document.getElementById("dash-active").innerText = data.active_units;
+        document.getElementById("dash-curated").innerText = data.curated_units;
+        document.getElementById("dash-pending").innerText = data.needs_curation_units;
+        document.getElementById("dash-flagged").innerText = data.flagged_units;
+        
+        // 2. Validity Breakdown
+        document.getElementById("validity-planning").innerText = data.validity_counts.valid_for_planning || 0;
+        document.getElementById("validity-review").innerText = data.validity_counts.needs_manual_review || 0;
+        document.getElementById("validity-blocked").innerText = data.validity_counts.blocked_by_curator || 0;
+        
+        // 3. Warnings Breakdown
+        const warningsContainer = document.getElementById("warnings-list-container");
+        warningsContainer.innerHTML = "";
+        
+        const formatWarningKey = (w) => {
+            return w.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        };
+        
+        const allWarningTypes = [
+            "degree_restriction",
+            "grade_threshold",
+            "logic_simplified",
+            "permission_required",
+            "recommended_preparation",
+            "other"
+        ];
+        
+        allWarningTypes.forEach(warn => {
+            const count = data.warning_counts[warn] || 0;
+            const div = document.createElement("div");
+            div.className = "flex justify-between py-1 border-b border-block";
+            div.innerHTML = `
+                <span>${formatWarningKey(warn)}:</span>
+                <span class="font-bold text-text">${count}</span>
+            `;
+            warningsContainer.appendChild(div);
+        });
+        
+        // 4. Subject Area Tables
+        const tbody = document.getElementById("subject-table-body");
+        tbody.innerHTML = "";
+        data.top_subject_stats.forEach(item => {
+            const tr = document.createElement("tr");
+            tr.className = "border-b border-block";
+            tr.innerHTML = `
+                <td class="py-2 font-bold">${item.subject}</td>
+                <td class="py-2 text-right">${item.total}</td>
+                <td class="py-2 text-right text-warn-pre font-bold">${item.needs_curation}</td>
+                <td class="py-2 text-right">${item.warnings_count}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        // 5. AI Logs
+        const logsContainer = document.getElementById("ai-logs-container");
+        logsContainer.innerHTML = "";
+        if (!data.recent_ai_attempts || data.recent_ai_attempts.length === 0) {
+            logsContainer.innerHTML = `<div class="text-[13px] text-dim italic py-4">No recent AI parsing attempts recorded.</div>`;
+        } else {
+            const sortedAttempts = [...data.recent_ai_attempts].reverse();
+            sortedAttempts.forEach(log => {
+                const item = document.createElement("div");
+                item.className = "border border-block p-3 flex flex-col gap-2 bg-block/10";
+                item.innerHTML = `
+                    <div class="flex justify-between text-[11px] font-extrabold uppercase tracking-wide text-dim">
+                        <span>Unit: <b class="text-text">${log.unit_code}</b> (${log.field_name})</span>
+                    </div>
+                    <div class="text-[12px] font-semibold">Raw: <span class="font-mono text-dim select-all">${log.raw_text}</span></div>
+                    <details class="text-[12px]">
+                        <summary class="cursor-pointer text-dim hover:text-text select-none">Show Parsed Output</summary>
+                        <pre class="bg-block p-2 mt-1 overflow-x-auto text-[11px] font-mono text-text">${JSON.stringify(log.parsed_output, null, 2)}</pre>
+                    </details>
+                `;
+                logsContainer.appendChild(item);
+            });
+        }
+        
+    } catch (err) {
+        console.error("Failed to load/render stats", err);
+    }
 }
