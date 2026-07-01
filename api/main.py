@@ -46,7 +46,7 @@ async def validate_plan(request: ValidationRequest):
     return run_validation(request)
 
 
-def _build_unit_json(cursor, codes: List[str]) -> List[Dict]:
+def _build_unit_json(cursor, codes: List[str], sort_results: bool = True) -> List[Dict]:
     if not codes:
         return []
 
@@ -64,6 +64,7 @@ def _build_unit_json(cursor, codes: List[str]) -> List[Dict]:
     """, codes)
 
     base_rows = cursor.fetchall()
+    base_rows_by_code = {row["unit_code"]: row for row in base_rows}
 
     # Get tables
     cursor.execute(f"""
@@ -78,7 +79,8 @@ def _build_unit_json(cursor, codes: List[str]) -> List[Dict]:
         tables_by_code[r["unit_code"]].append(r["table_name"])
 
     units_list = []
-    for row in base_rows:
+    rows_in_order = [base_rows_by_code[code] for code in codes if code in base_rows_by_code] if not sort_results else base_rows
+    for row in rows_in_order:
         code = row["unit_code"]
         avail = get_availability(code)
 
@@ -107,7 +109,8 @@ def _build_unit_json(cursor, codes: List[str]) -> List[Dict]:
             "url": row["handbook_url"]
         })
 
-    units_list.sort(key=lambda x: x["code"])
+    if sort_results:
+        units_list.sort(key=lambda x: x["code"])
     return units_list
 
 
@@ -125,10 +128,18 @@ async def get_units(
         sql = "SELECT u.unit_code FROM units u "
         conditions = ["u.is_active = 1"]
         params = []
+        order_params = []
 
         if query:
             conditions.append("(u.unit_code LIKE ? OR u.title LIKE ?)")
             params.extend([f"%{query}%", f"%{query}%"])
+            query_upper = query.upper()
+            order_params.extend([
+                f"{query_upper}%",
+                f"{query}%",
+                f"{query_upper}%",
+                f"{query}%",
+            ])
 
         if table and table.lower() != "all":
             sql += " JOIN unit_tables ut ON u.unit_code = ut.unit_code "
@@ -139,14 +150,24 @@ async def get_units(
                 params.append(f"%{table}%")
 
         sql += " WHERE " + " AND ".join(conditions)
-        sql += " ORDER BY u.unit_code LIMIT ? OFFSET ?"
+        if query:
+            sql += " ORDER BY CASE "
+            sql += "WHEN u.unit_code LIKE ? THEN 0 "
+            sql += "WHEN u.unit_code LIKE ? THEN 1 "
+            sql += "WHEN u.title LIKE ? THEN 2 "
+            sql += "WHEN u.title LIKE ? THEN 3 "
+            sql += "ELSE 4 END, u.unit_code"
+            params.extend(order_params)
+        else:
+            sql += " ORDER BY u.unit_code"
+        sql += " LIMIT ? OFFSET ?"
 
         params.extend([page_size, (page - 1) * page_size])
 
         cursor.execute(sql, params)
         codes = [r["unit_code"] for r in cursor.fetchall()]
 
-        results = _build_unit_json(cursor, codes)
+        results = _build_unit_json(cursor, codes, sort_results=False)
         # #region agent log
         _debug_log("H2", "api/main.py:get_units", "units query result", {
             "query": query,

@@ -1,6 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
+import sqlite3
 from api.main import app
+import api.main
 
 client = TestClient(app)
 
@@ -60,3 +62,92 @@ def test_serve_planner_root():
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert b"USYD Course Planner" in response.content
+
+
+def test_get_units_prioritizes_unit_code(monkeypatch):
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE units (
+        unit_code TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        credit_points INTEGER NOT NULL,
+        level INTEGER NOT NULL,
+        faculty TEXT,
+        handbook_url TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        replaced_by_code TEXT,
+        is_special_topic INTEGER NOT NULL DEFAULT 0,
+        is_zero_cp INTEGER NOT NULL DEFAULT 0,
+        is_year_long INTEGER NOT NULL DEFAULT 0,
+        is_external_placeholder INTEGER NOT NULL DEFAULT 0,
+        resolved_year INTEGER
+    )
+    """)
+    cursor.execute("""
+    CREATE TABLE unit_rules (
+        unit_code TEXT PRIMARY KEY,
+        prerequisites_text TEXT,
+        corequisites_text TEXT,
+        prohibitions_text TEXT,
+        assumed_knowledge_text TEXT,
+        prerequisites_expr TEXT,
+        corequisites_expr TEXT,
+        prohibitions_expr TEXT,
+        needs_curation INTEGER NOT NULL DEFAULT 0,
+        flagged INTEGER NOT NULL DEFAULT 0
+    )
+    """)
+    cursor.execute("""
+    CREATE TABLE unit_availabilities (
+        unit_code TEXT,
+        session_code TEXT,
+        session_text TEXT,
+        modes TEXT,
+        locations TEXT,
+        PRIMARY KEY (unit_code, session_code)
+    )
+    """)
+    cursor.execute("""
+    CREATE TABLE unit_tables (
+        unit_code TEXT,
+        table_name TEXT,
+        PRIMARY KEY (unit_code, table_name)
+    )
+    """)
+
+    units = [
+        ("COMP1234", "Zebra Studies", 6, 1000, "Science", "https://example.com/comp1234", 1),
+        ("ABCD1000", "Computer Thinking", 6, 1000, "Science", "https://example.com/abcd1000", 1),
+    ]
+    cursor.executemany(
+        "INSERT INTO units (unit_code, title, credit_points, level, faculty, handbook_url, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        units,
+    )
+    cursor.executemany(
+        "INSERT INTO unit_availabilities (unit_code, session_code, session_text, modes, locations) VALUES (?, ?, ?, ?, ?)",
+        [
+            ("COMP1234", "s1", "Semester 1", "", ""),
+            ("ABCD1000", "s1", "Semester 1", "", ""),
+        ],
+    )
+    cursor.executemany(
+        "INSERT INTO unit_tables (unit_code, table_name) VALUES (?, ?)",
+        [
+            ("COMP1234", "Table A - Science"),
+            ("ABCD1000", "Table A - Science"),
+        ],
+    )
+    conn.commit()
+
+    def mock_get_db_connection():
+        return conn
+
+    monkeypatch.setattr(api.main, "get_db_connection", mock_get_db_connection)
+
+    response = client.get("/api/units?query=comp&page_size=10")
+    assert response.status_code == 200
+    data = response.json()
+    assert [unit["code"] for unit in data[:2]] == ["COMP1234", "ABCD1000"]
