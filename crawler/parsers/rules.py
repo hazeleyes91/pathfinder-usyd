@@ -139,7 +139,7 @@ async def parse_rule_field(text: str, field_name: str, unit_code: str, has_keys:
         res_dict["curation_validity"] = CurationValidity.NEEDS_MANUAL_REVIEW
         return res_dict, True
 
-async def parse_all_rules(year: int = DEFAULT_TARGET_YEAR, max_units: int = None, regex_only: bool = True, preproc_regex_only: bool = False):
+async def parse_all_rules(year: int = DEFAULT_TARGET_YEAR, max_units: int = None, regex_only: bool = True, preproc_regex_only: bool = False, force: bool = False):
     input_path = DATA_DIR / "raw" / "json" / f"parsed_units_{year}.json"
     output_path = DATA_DIR / f"parsed_rules_{year}.json"
     
@@ -183,14 +183,14 @@ async def parse_all_rules(year: int = DEFAULT_TARGET_YEAR, max_units: int = None
         
         # Check if we can reuse the existing parsed entry to avoid API limits
         # We only reuse if the entry contains the new schema keys 'curation_validity'
-        if code in existing_db:
+        if not force and code in existing_db:
             entry = existing_db[code]
             raw = entry.get("raw_rules", {})
             if (raw.get("prerequisites") == prereqs_text and
                 raw.get("corequisites") == coreqs_text and
                 raw.get("prohibitions") == prohibitions_text and
                 "curation_validity" in entry.get("prerequisites_expr", {}) and
-                (not entry.get("needs_curation") or not has_keys)):
+                not entry.get("needs_curation")):
                 
                 parsed_rules_db[code] = entry
                 if entry.get("needs_curation"):
@@ -258,10 +258,12 @@ if __name__ == "__main__":
     parser.add_argument("--year", type=int, default=DEFAULT_TARGET_YEAR, help="Target academic year (default: dynamic)")
     parser.add_argument("--use-ai", action="store_true", help="Enable AI parsing agent fallback for complex rules")
     parser.add_argument("--preproc-regex-only", action="store_true", help="Bypass AI Expert, check only if Regex 2 parses preprocessed output")
+    parser.add_argument("--force", action="store_true", help="Force parsing of all rules, ignoring existing parsed cache")
     args = parser.parse_args()
     asyncio.run(parse_all_rules(
         year=args.year, 
         max_units=args.limit, 
         regex_only=not args.use_ai, 
-        preproc_regex_only=args.preproc_regex_only
+        preproc_regex_only=args.preproc_regex_only,
+        force=args.force
     ))

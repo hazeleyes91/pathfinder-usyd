@@ -13,25 +13,25 @@
   <style type="text/tailwindcss">
     :root {
       /* Overall Page Spacing Variables */
-      --page-padding-x: 20px;       /* Horizontal padding for main window edges */
-      --page-padding-y: 12px;       /* Vertical padding for main window edges */
-      --header-height: 58px;        /* Height of the header bar */
+      --page-padding-x: 12px;       /* Horizontal padding for main window edges (reduced from 20px) */
+      --page-padding-y: 10px;       /* Vertical padding for main window edges */
+      --header-height: 54px;        /* Height of the header bar */
       
       /* Sidebar Spacing Variables */
-      --sidebar-padding-x: 16px;    /* Horizontal padding inside sidebars */
-      --sidebar-padding-y: 16px;    /* Vertical padding inside sidebars */
+      --sidebar-padding-x: 12px;    /* Horizontal padding inside sidebars (reduced from 16px) */
+      --sidebar-padding-y: 12px;    /* Vertical padding inside sidebars */
       
       /* Canvas Spacing Variables */
-      --canvas-padding-x: 20px;     /* Horizontal padding inside canvas */
-      --canvas-padding-y: 16px;     /* Vertical padding inside canvas */
+      --canvas-padding-x: 12px;     /* Horizontal padding inside canvas (reduced from 20px) */
+      --canvas-padding-y: 12px;     /* Vertical padding inside canvas */
 
       /* Component Spacing Variables */
-      --card-padding-x: 10px;       /* Horizontal padding inside cards */
+      --card-padding-x: 8px;        /* Horizontal padding inside cards */
       --card-padding-y: 6px;        /* Vertical padding inside cards */
-      --prereq-padding: 10px;       /* Padding inside the prerequisites block */
-      --semester-padding-x: 12px;   /* Horizontal padding inside semester containers */
-      --semester-padding-y: 8px;    /* Vertical padding inside semester containers */
-      --semester-card-gap: 8px;     /* Gap between cards inside semester containers */
+      --prereq-padding: 8px;        /* Padding inside the prerequisites block */
+      --semester-padding-x: 8px;    /* Horizontal padding inside semester containers (reduced from 12px) */
+      --semester-padding-y: 6px;    /* Vertical padding inside semester containers */
+      --semester-card-gap: 6px;     /* Gap between cards inside semester containers */
 
       /* Inter-Component Spacing Gaps */
       --gap-search-filters: 8px;     /* Gap between search input and select dropdown */
@@ -44,23 +44,24 @@
     }
 
     @theme {
-      --color-bg: #F7F7F7;
-      --color-block: #EBEBEB;
-      --color-hover: #D8D8D8;
-      --color-text: #1A1A1A;
-      --color-dim: #6B7280;
-      --color-active: #1A1A1A;
-      --color-active-txt: #F7F7F7;
+      --color-bg: #F0EAE1;
+      --color-block: #E6DCD3;
+      --color-hover: #D6C8BB;
+      --color-text: #2B2D2F;
+      --color-dim: #5D6063;
+      --color-active: #2B2D2F;
+      --color-active-txt: #F0EAE1;
       
-      --color-tag-eng: #5B7FA6;
-      --color-tag-sci: #5A8A72;
-      --color-tag-bus: #9B7A4A;
-      --color-tag-ole: #7A6A9B;
+      --color-tag-eng: #2B5B84;
+      --color-tag-sci: #2B6B4C;
+      --color-tag-bus: #835B24;
+      --color-tag-ole: #574482;
       
       --color-warn-miss: #B45309;
       --color-warn-req: #B91C1C;
       --color-warn-soft: #2563EB;
       
+      /* Typography */
       --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
@@ -91,7 +92,7 @@
     button, select, input {
       @apply font-inter text-[14px] font-semibold text-text bg-block border-none rounded-none px-4 py-2 cursor-pointer outline-none transition-colors;
     }
-    button:hover, select:hover { @apply bg-hover; }
+    button:hover { @apply bg-hover; }
     button.active { @apply bg-active text-active-txt; }
     input[type="text"] { @apply cursor-text border border-transparent focus:border-dim; }
     
@@ -112,7 +113,7 @@
     }
     
     .remove-unit-btn {
-      @apply bg-transparent px-0 text-[16px] font-extrabold text-dim hover:text-text hover:bg-transparent transition-colors leading-none cursor-pointer;
+      @apply bg-transparent p-1 flex items-center justify-center text-text opacity-70 hover:opacity-100 hover:text-warn-req transition-colors cursor-pointer rounded;
     }
 
     /* Unit Cards */
@@ -122,17 +123,36 @@
     }
     .unit-card:hover { @apply bg-hover; }
     .unit-card.selected { @apply bg-active text-active-txt; }
-    .unit-card.selected .unit-session { color: rgba(255,255,255,0.55); }
+    .unit-card.selected .text-dim,
+    .unit-card.selected .unit-title,
+    .unit-card.selected .unit-meta,
+    .unit-card.selected .unit-session { color: var(--color-active-txt); opacity: 0.8; }
+    
+    .text-tag-eng { color: var(--color-tag-eng); }
+    .text-tag-sci { color: var(--color-tag-sci); }
+    .text-tag-bus { color: var(--color-tag-bus); }
+    .text-tag-ole { color: var(--color-tag-ole); }
+
+    /* Table tag colors when card is selected (inverted local theme) */
+    .unit-card.selected .text-tag-eng { color: #7BAAD4; opacity: 0.8; }
+    .unit-card.selected .text-tag-sci { color: #7ABDA0; opacity: 0.8; }
+    .unit-card.selected .text-tag-bus { color: #C9A06A; opacity: 0.8; }
+    .unit-card.selected .text-tag-ole { color: #A896CC; opacity: 0.8; }
+
+    body.dark-mode .unit-card.selected .text-tag-eng { color: #2B5B84; opacity: 0.8; }
+    body.dark-mode .unit-card.selected .text-tag-sci { color: #2B6B4C; opacity: 0.8; }
+    body.dark-mode .unit-card.selected .text-tag-bus { color: #835B24; opacity: 0.8; }
+    body.dark-mode .unit-card.selected .text-tag-ole { color: #574482; opacity: 0.8; }
     
     .placed-unit-card {
-      width: calc(25% - 8px);
+      width: calc(25% - calc(var(--semester-card-gap) * 3 / 4));
       @apply bg-bg border border-block flex flex-col justify-between min-h-[68px] cursor-grab hover:bg-hover transition-colors;
       padding: var(--card-padding-y) var(--card-padding-x);
     }
     .placed-unit-card.selected { outline: 2px solid var(--color-text); }
     
-    .unit-header { @apply flex justify-between items-center font-extrabold text-[15px] mb-0.5; }
-    .unit-title { @apply text-[13px] font-normal leading-snug mb-1 line-clamp-2; }
+    .unit-header { @apply flex justify-between items-center font-extrabold text-[15px] mb-1; }
+    .unit-title { @apply text-[13px] text-dim font-normal leading-snug mb-1 line-clamp-2; }
     .unit-session { @apply text-[12px] font-semibold text-dim mt-0.5; }
     .unit-meta { @apply flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.1px] text-dim; }
 
@@ -225,7 +245,7 @@
     }
     
     .canvas-year-header {
-      @apply flex justify-between items-baseline border-b border-text;
+      @apply flex justify-between items-center border-b border-text;
       padding-top: 4px;
       padding-bottom: 6px;
       margin-bottom: 10px;
@@ -239,7 +259,7 @@
 
     /* Drag over styles */
     .row-slots {
-      @apply border border-transparent transition-colors;
+      @apply border border-transparent transition-colors min-h-[76px];
     }
     .row-slots.highlight {
       @apply border-dashed border-dim;
@@ -262,34 +282,34 @@
     }
 
     .warning-tooltip {
-      @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-block border border-dim text-text text-[11px] font-semibold p-2.5 rounded-[4px] whitespace-pre-line z-50 pointer-events-none shadow-md text-left min-w-[200px];
+      @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block text-[12px] font-semibold p-2.5 rounded-[4px] whitespace-pre-line z-50 pointer-events-none shadow-md text-left min-w-[200px];
     }
 
     .warning-box-req {
-      background-color: rgba(185, 28, 28, 0.08);
+      background-color: #FDF2F2;
       border: 1px solid rgba(185, 28, 28, 0.25);
       color: var(--color-warn-req);
     }
     .warning-box-miss {
-      background-color: rgba(180, 83, 9, 0.08);
+      background-color: #FFF7ED;
       border: 1px solid rgba(180, 83, 9, 0.25);
       color: var(--color-warn-miss);
     }
     .warning-box-soft {
-      background-color: rgba(37, 99, 235, 0.08);
+      background-color: #EFF6FF;
       border: 1px solid rgba(37, 99, 235, 0.25);
       color: var(--color-warn-soft);
     }
     body.dark-mode .warning-box-req {
-      background-color: rgba(220, 38, 38, 0.08);
+      background-color: #1F1212;
       border: 1px solid rgba(220, 38, 38, 0.25);
     }
     body.dark-mode .warning-box-miss {
-      background-color: rgba(217, 119, 6, 0.08);
+      background-color: #24140D;
       border: 1px solid rgba(217, 119, 6, 0.25);
     }
     body.dark-mode .warning-box-soft {
-      background-color: rgba(96, 165, 250, 0.08);
+      background-color: #111827;
       border: 1px solid rgba(96, 165, 250, 0.25);
     }
   </style>
@@ -310,35 +330,38 @@
 <div class="flex grow overflow-hidden" ondrop="dropBack(event)" ondragover="allowDropBack(event)">
 
   <!-- Left: Search -->
-  <div class="w-[320px] shrink-0 flex flex-col bg-bg overflow-hidden border-r border-block left-sidebar-container">
+  <div class="w-[280px] shrink-0 flex flex-col bg-bg overflow-hidden border-r border-block left-sidebar-container">
     <div class="font-extrabold text-[20px] tracking-tight pb-4 shrink-0">Search</div>
 
-    <div class="search-controls shrink-0 pr-1">
-      <div class="flex items-center bg-block">
-        <input type="text" id="search-input" placeholder="Search units..." oninput="handleSearch()" class="grow bg-transparent pr-1 pl-3 py-2 outline-none">
-        <button aria-label="Search" class="!bg-transparent px-3 py-2 text-text flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <div class="search-controls shrink-0">
+      <div class="flex items-center bg-block group">
+        <input type="text" id="search-input" placeholder="Search units..." oninput="handleSearch()" class="grow bg-transparent !pl-2 py-2 outline-none">
+        <button aria-label="Search" onclick="handleSearch()" class="w-6 h-6 mr-[6px] !p-0 !bg-transparent flex items-center justify-center text-dim hover:text-text transition-colors cursor-pointer shrink-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
       </div>
-      <div class="w-full">
-        <select id="table-filter" onchange="handleSearch()" class="w-full">
-          <option value="all">All Tables</option>
-          <option value="engineering">Table A — Engineering</option>
-          <option value="science">Table A — Science</option>
-          <option value="ole">Open Learning (OLE)</option>
+      <div class="relative w-full bg-block hover:bg-hover transition-colors">
+        <select id="table-filter" onchange="handleSearch()" class="w-full appearance-none pr-8 !pl-2 bg-transparent">
+          <option value="all" class="bg-block">All Tables</option>
+          <option value="engineering" class="bg-block">Table A — Engineering</option>
+          <option value="science" class="bg-block">Table A — Science</option>
+          <option value="ole" class="bg-block">Open Learning (OLE)</option>
         </select>
+        <div class="absolute right-[12px] top-1/2 -translate-y-1/2 pointer-events-none text-dim">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
       </div>
     </div>
 
     <!-- Search Cards Scroll Container -->
-    <div class="overflow-y-auto grow pr-1 search-results-list" id="search-results">
+    <div class="overflow-y-auto grow search-results-list" id="search-results">
       <!-- Injected dynamically by JS -->
     </div>
   </div>
 
   <!-- Center: Planner canvas -->
   <div class="grow overflow-y-auto bg-bg canvas-container">
-    <div class="font-extrabold text-[24px] tracking-tight mb-6 flex justify-between items-center">
+    <div class="font-extrabold text-[24px] tracking-tight mb-3 flex justify-between items-center">
       <span>Study Canvas</span>
     </div>
 
@@ -352,7 +375,7 @@
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y1-sem1-cb" checked onchange="toggleTermRow('y1', 'sem1')"> Sem 1</label>
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y1-wint-cb" onchange="toggleTermRow('y1', 'wint')"> Wint</label>
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y1-sem2-cb" checked onchange="toggleTermRow('y1', 'sem2')"> Sem 2</label>
-            <button class="remove-unit-btn ml-2 opacity-60 hover:opacity-100 flex items-center justify-center" onclick="removeYear(1)" title="Remove Year">
+            <button class="remove-unit-btn ml-2 mr-2 opacity-60 hover:opacity-100 flex items-center justify-center" onclick="removeYear(1)" title="Remove Year">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             </button>
           </div>
@@ -394,7 +417,7 @@
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y2-sem1-cb" checked onchange="toggleTermRow('y2', 'sem1')"> Sem 1</label>
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y2-wint-cb" onchange="toggleTermRow('y2', 'wint')"> Wint</label>
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y2-sem2-cb" checked onchange="toggleTermRow('y2', 'sem2')"> Sem 2</label>
-            <button class="remove-unit-btn ml-2 opacity-60 hover:opacity-100 flex items-center justify-center" onclick="removeYear(2)" title="Remove Year">
+            <button class="remove-unit-btn ml-2 mr-2 opacity-60 hover:opacity-100 flex items-center justify-center" onclick="removeYear(2)" title="Remove Year">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             </button>
           </div>
@@ -435,16 +458,20 @@
   </div>
 
   <!-- Right sidebar pane -->
-  <div class="w-[260px] shrink-0 border-l border-block flex flex-col overflow-hidden bg-bg right-sidebar-container">
+  <div class="w-[280px] shrink-0 border-l border-block flex flex-col overflow-hidden bg-bg right-sidebar-container">
     <!-- Empty state -->
-    <div class="grow flex items-center justify-center text-center text-[14px] text-dim leading-snug dsp-empty" id="dsp-empty">
-      Select any unit<br>to inspect details
+    <div class="grow flex flex-col items-center justify-center text-center text-[13px] text-dim leading-relaxed dsp-empty overflow-y-auto" id="dsp-empty">
+      <div class="mb-4">Select any unit to inspect details,<br>active warnings, and reference units.</div>
+      <div id="dsp-global-warnings" class="w-full text-left flex flex-col gap-2"></div>
     </div>
 
     <!-- Populated state -->
     <div id="dsp-populated" class="hidden flex-col grow overflow-hidden">
-      <div class="border-b-2 border-text shrink-0 dsp-populated-header">
-        <div class="font-extrabold text-[20px] tracking-tight" id="dsp-code">—</div>
+      <div class="border-b-2 border-text shrink-0 dsp-populated-header relative">
+        <button class="absolute top-3 right-3 text-dim hover:text-text cursor-pointer bg-transparent p-1 transition-colors" onclick="window.closeDetails()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div class="font-extrabold text-[20px] tracking-tight pr-6" id="dsp-code">—</div>
         <div class="text-[14px] font-normal leading-snug mt-1" id="dsp-title">—</div>
       </div>
       <div class="flex flex-col gap-3.5 overflow-y-auto grow dsp-populated-body">
@@ -492,6 +519,32 @@
 </div>
 
 <script>
+  // Pagination State
+  let currentPage = 1;
+  let hasMore = true;
+  let isFetching = false;
+
+  function getTagColorClass(tableName) {
+    if (!tableName) return 'text-dim';
+    const t = tableName.toLowerCase();
+    if (t.includes('engineering')) return 'text-tag-eng';
+    if (t.includes('science')) return 'text-tag-sci';
+    if (t.includes('business')) return 'text-tag-bus';
+    if (t.includes('open')) return 'text-tag-ole';
+    return 'text-dim';
+  }
+
+  function getTableShortName(tableName) {
+    if (!tableName) return 'Shared Pool';
+    const t = tableName.toLowerCase();
+    if (t.includes('engineering')) return 'Engineering';
+    if (t.includes('science')) return 'Science';
+    if (t.includes('business')) return 'Business';
+    if (t.includes('open')) return 'Open Learning';
+    if (t.includes('shared') || t === 'table s') return 'Shared Pool';
+    return tableName.replace(/^Table [A-Z] - /i, '').replace(/^Table /i, '') || tableName;
+  }
+
   // Global Database & State
   let activeMode = 'free'; // 'free' or 'struct'
   let draggedUnitCode = null;
@@ -514,7 +567,7 @@
           <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y${year}-sem1-cb" checked onchange="toggleTermRow('y${year}', 'sem1')"> Sem 1</label>
           <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y${year}-wint-cb" onchange="toggleTermRow('y${year}', 'wint')"> Wint</label>
           <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="y${year}-sem2-cb" checked onchange="toggleTermRow('y${year}', 'sem2')"> Sem 2</label>
-          <button class="remove-unit-btn ml-2 opacity-60 hover:opacity-100 flex items-center justify-center" onclick="removeYear(${year})" title="Remove Year">
+          <button class="remove-unit-btn ml-2 mr-2 opacity-60 hover:opacity-100 flex items-center justify-center" onclick="removeYear(${year})" title="Remove Year">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
           </button>
         </div>
@@ -599,416 +652,9 @@
     }
   };
 
-  const unitsDb = {
-    "COMP2017": {
-        "code": "COMP2017",
-        "title": "Systems Programming",
-        "avail": [
-            "sem1"
-        ],
-        "availText": "Semester 1",
-        "cp": 6,
-        "tables": [],
-        "prereq": "INFO1113 or INFO1105 or INFO1905 or INFO1103",
-        "coreq": "COMP2123 or COMP2823 or INFO1105 or INFO1905",
-        "prohibit": "COMP2129 or COMP9017 or COMP9129",
-        "assumed": "Discrete mathematics and probability (e.g. MATH1064 or equivalent); linear algebra (e.g. MATH1061 or equivalent)",
-        "url": "https://www.sydney.edu.au/units/COMP2017"
-    },
-    "COMP2022": {
-        "code": "COMP2022",
-        "title": "Models of Computation",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "INFO1110 or INFO1910 or INFO1113 or ENGG1810",
-        "coreq": "COMP2123 or COMP2823",
-        "prohibit": "COMP2922",
-        "assumed": "Discrete mathematics (e.g. MATH1064 or equivalent)",
-        "url": "https://www.sydney.edu.au/units/COMP2022"
-    },
-    "COMP2123": {
-        "code": "COMP2123",
-        "title": "Data Structures and Algorithms",
-        "avail": [
-            "sem1",
-            "sem2"
-        ],
-        "availText": "Semester 1, Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "INFO1110 or INFO1910 or INFO1113 or DATA1002 or DATA1902 or ENGG1810",
-        "coreq": "None",
-        "prohibit": "INFO1105 or INFO1905 or COMP2823",
-        "assumed": "Discrete mathematics and probability (e.g. MATH1064 or equivalent)",
-        "url": "https://www.sydney.edu.au/units/COMP2123"
-    },
-    "COMP2823": {
-        "code": "COMP2823",
-        "title": "Data Structures and Algorithms (Adv)",
-        "avail": [
-            "sem1"
-        ],
-        "availText": "Semester 1",
-        "cp": 6,
-        "tables": [],
-        "prereq": "Distinction level results in (INFO1110 or INFO1910 or INFO1113 or DATA1002 or DATA1902 or ENGG1810)",
-        "coreq": "None",
-        "prohibit": "INFO1105 or INFO1905 or COMP2123",
-        "assumed": "Discrete mathematics and probability (e.g. MATH1064 or equivalent)",
-        "url": "https://www.sydney.edu.au/units/COMP2823"
-    },
-    "COMP2922": {
-        "code": "COMP2922",
-        "title": "Models of Computation (Adv)",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "(INFO1110 or INFO1910 or INFO1113 or ENGG1810) and (Distinction level results in\u00a0INFO1110 or INFO1910 or INFO1113 or ENGG1810\u00a0or MATH1064 or MATH1964)",
-        "coreq": "COMP2123 or COMP2823",
-        "prohibit": "COMP2022",
-        "assumed": "Discrete mathematics (e.g. MATH1064 or equivalent)",
-        "url": "https://www.sydney.edu.au/units/COMP2922"
-    },
-    "COMP3027": {
-        "code": "COMP3027",
-        "title": "Algorithm Design",
-        "avail": [
-            "sem1"
-        ],
-        "availText": "Semester 1",
-        "cp": 6,
-        "tables": [],
-        "prereq": "COMP2123 or COMP2823",
-        "coreq": "None",
-        "prohibit": "COMP2007 or COMP2907 or COMP3927",
-        "assumed": "Discrete mathematics and probability (e.g. MATH1064 or equivalent)",
-        "url": "https://www.sydney.edu.au/units/COMP3027"
-    },
-    "COMP3221": {
-        "code": "COMP3221",
-        "title": "Distributed Systems",
-        "avail": [
-            "sem1"
-        ],
-        "availText": "Semester 1",
-        "cp": 6,
-        "tables": [],
-        "prereq": "(INFO1105 or INFO1905) or ((INFO1103 or INFO1113) and (COMP2123 or COMP2823))",
-        "coreq": "None",
-        "prohibit": "COMP2121",
-        "assumed": "None",
-        "url": "https://www.sydney.edu.au/units/COMP3221"
-    },
-    "COMP3308": {
-        "code": "COMP3308",
-        "title": "Introduction to Artificial Intelligence",
-        "avail": [
-            "sem1"
-        ],
-        "availText": "Semester 1",
-        "cp": 6,
-        "tables": [],
-        "prereq": "INFO1110 or INFO1910 or ENGG1801 or ENGG1810 or DATA1002 or DATA1902",
-        "coreq": "None",
-        "prohibit": "COMP3608",
-        "assumed": "Data structures and algorithms as covered in COMP2123 or COMP2823.",
-        "url": "https://www.sydney.edu.au/units/COMP3308"
-    },
-    "COMP3419": {
-        "code": "COMP3419",
-        "title": "Graphics and Multimedia",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "COMP2123 or COMP2823 or INFO1105 or INFO1905",
-        "coreq": "None",
-        "prohibit": "None",
-        "assumed": "Programming skills",
-        "url": "https://www.sydney.edu.au/units/COMP3419"
-    },
-    "COMP3520": {
-        "code": "COMP3520",
-        "title": "Operating Systems Internals",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "(COMP2017 or COMP2129) and (COMP2123 or COMP2823 or INFO1105 or INFO1905)",
-        "coreq": "None",
-        "prohibit": "None",
-        "assumed": "None",
-        "url": "https://www.sydney.edu.au/units/COMP3520"
-    },
-    "COMP3608": {
-        "code": "COMP3608",
-        "title": "Introduction to Artificial Intelligence (Adv)",
-        "avail": [
-            "sem1"
-        ],
-        "availText": "Semester 1",
-        "cp": 6,
-        "tables": [],
-        "prereq": "(INFO1110 or INFO1910 or ENGG1810 or DATA1002 or DATA1902) and distinction-level results in at least one 2000-level COMP or MATH or SOFT unit",
-        "coreq": "None",
-        "prohibit": "COMP3308",
-        "assumed": "Data structures and algorithms as covered in COMP2123 or COMP2823.",
-        "url": "https://www.sydney.edu.au/units/COMP3608"
-    },
-    "COMP3888": {
-        "code": "COMP3888",
-        "title": "Computer Science Project",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "(INFO1110 or INFO1910) and INFO1113 and (COMP2123 or COMP2823) and COMP2017 and (COMP2022 or COMP2922)",
-        "coreq": "None",
-        "prohibit": "INFO3600 or COMP3600 or COMP3615 or COMP3988",
-        "assumed": "None",
-        "url": "https://www.sydney.edu.au/units/COMP3888"
-    },
-    "COMP3927": {
-        "code": "COMP3927",
-        "title": "Algorithm Design (Adv)",
-        "avail": [
-            "sem1"
-        ],
-        "availText": "Semester 1",
-        "cp": 6,
-        "tables": [],
-        "prereq": "Distinction level results in COMP2123 or COMP2823",
-        "coreq": "None",
-        "prohibit": "COMP2007 or COMP2907 or COMP3027",
-        "assumed": "Discrete mathematics and probability (e.g. MATH1064 or equivalent)",
-        "url": "https://www.sydney.edu.au/units/COMP3927"
-    },
-    "COMP3988": {
-        "code": "COMP3988",
-        "title": "Computer Science Project (Advanced)",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "(INFO1110 or INFO1910) and INFO1113 and (COMP2123 or COMP2823) and COMP2017 and (COMP2022 or COMP2922) with Distinction level results in at least one of these units",
-        "coreq": "None",
-        "prohibit": "INFO3600 or COMP3615 or COMP3600 or COMP3888",
-        "assumed": "None",
-        "url": "https://www.sydney.edu.au/units/COMP3988"
-    },
-    "COMP9017": {
-        "code": "COMP9017",
-        "title": "Systems Programming",
-        "avail": [
-            "sem1"
-        ],
-        "availText": "Semester 1",
-        "cp": 6,
-        "tables": [],
-        "prereq": "None",
-        "coreq": "None",
-        "prohibit": "COMP2129 or COMP2017 or COMP9129",
-        "assumed": "COMP9003; discrete mathematics and probability (e.g. MATH1064 or equivalent); linear algebra (e.g. MATH1061 or equivalent)",
-        "url": "https://www.sydney.edu.au/units/COMP9017"
-    },
-    "DATA1002": {
-        "code": "DATA1002",
-        "title": "Informatics: Data and Computation",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "None",
-        "coreq": "None",
-        "prohibit": "INFO1903 or DATA1902",
-        "assumed": "None",
-        "url": "https://www.sydney.edu.au/units/DATA1002"
-    },
-    "DATA1902": {
-        "code": "DATA1902",
-        "title": "Informatics: Data and Computation (Advanced)",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2 \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\nDepartmental Permission",
-        "cp": 6,
-        "tables": [],
-        "prereq": "None",
-        "coreq": "None",
-        "prohibit": "INFO1903 or DATA1002",
-        "assumed": "This unit is intended for students with ATAR at least sufficient for entry to the BSc/BAdvStudies(Advanced) stream, or for those who gained Distinction results or better, in some unit in Data Science, Mathematics, or Computer Science. Students with portfolio of high-quality relevant prior work can also be admitted",
-        "url": "https://www.sydney.edu.au/units/DATA1902"
-    },
-    "ENGG1810": {
-        "code": "ENGG1810",
-        "title": "Introduction to Engineering Computing",
-        "avail": [
-            "sem1",
-            "sem2"
-        ],
-        "availText": "Semester 1, Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "None",
-        "coreq": "None",
-        "prohibit": "ENGG1801 or INFO1110 or INFO1910 or INFO1103 or INFO1903 or INFO1105 or INFO1905 or COSC1003",
-        "assumed": "None",
-        "url": "https://www.sydney.edu.au/units/ENGG1810"
-    },
-    "INFO1110": {
-        "code": "INFO1110",
-        "title": "Introduction to Programming",
-        "avail": [
-            "sem1",
-            "sem2"
-        ],
-        "availText": "Semester 1, Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "None",
-        "coreq": "None",
-        "prohibit": "INFO1910 or INFO1103 or INFO1903 or INFO1105 or INFO1905 or ENGG1810",
-        "assumed": "None",
-        "url": "https://www.sydney.edu.au/units/INFO1110"
-    },
-    "INFO1113": {
-        "code": "INFO1113",
-        "title": "Object-Oriented Programming",
-        "avail": [
-            "sem1",
-            "sem2"
-        ],
-        "availText": "Semester 1, Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "INFO1110 or INFO1910 or ENGG1810",
-        "coreq": "None",
-        "prohibit": "INFO1103 or INFO1105 or INFO1905",
-        "assumed": "None",
-        "url": "https://www.sydney.edu.au/units/INFO1113"
-    },
-    "MATH1061": {
-        "code": "MATH1061",
-        "title": "Mathematics 1A",
-        "avail": [
-            "sem1",
-            "sem2",
-            "summ"
-        ],
-        "availText": "Intensive January, Semester 1, Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "None",
-        "coreq": "None",
-        "prohibit": "MATH1901 or MATH1902 or MATH1921 or MATH1906 or MATH1931 or MATH1001 or MATH1021 or MATH1961 or MATH1971 or MATH1002 or MATH1014",
-        "assumed": "NSW HSC Extension 1 Mathematics or equivalent",
-        "url": "https://www.sydney.edu.au/units/MATH1061"
-    },
-    "MATH1064": {
-        "code": "MATH1064",
-        "title": "Discrete Mathematics for Computation",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2",
-        "cp": 6,
-        "tables": [],
-        "prereq": "None",
-        "coreq": "None",
-        "prohibit": "MATH1004 or MATH1904 or MATH1964",
-        "assumed": "Coordinate geometry, basic integral and differential calculus, polynomial equations and algebraic manipulations, equivalent to HSC Mathematics",
-        "url": "https://www.sydney.edu.au/units/MATH1064"
-    },
-    "MATH1964": {
-        "code": "MATH1964",
-        "title": "Discrete Mathematics for Computation (Adv)",
-        "avail": [
-            "sem2"
-        ],
-        "availText": "Semester 2 \n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\nDepartmental Permission",
-        "cp": 6,
-        "tables": [],
-        "prereq": "None",
-        "coreq": "None",
-        "prohibit": "MATH1004 or MATH1904 or MATH1064",
-        "assumed": "(HSC Mathematics Extension 2) or (Band E4 in HSC Mathematics Extension 1) or equivalent",
-        "url": "https://www.sydney.edu.au/units/MATH1964"
-    }
-};
+  let unitsDb = {};
 
-  function getTableShortName(table) {
-    if (!table) return "Shared Pool";
-    const tl = table.toLowerCase();
-    if (tl.includes("science")) return "Science";
-    if (tl.includes("engineering") || tl.includes("computer science")) return "Engineering";
-    if (tl.includes("open") || tl.includes("ole")) return "OLE";
-    return "Shared Pool";
-  }
-
-  function getTagColorClass(table) {
-    if (!table) return "text-tag-shared";
-    const tl = table.toLowerCase();
-    if (tl.includes("science")) return "text-tag-sci";
-    if (tl.includes("engineering") || tl.includes("computer science")) return "text-tag-eng";
-    if (tl.includes("open") || tl.includes("ole")) return "text-tag-ole";
-    return "text-tag-shared";
-  }
-
-  // Render left sidebar units
-  function renderSearchList() {
-    const listContainer = document.getElementById("search-results");
-    if (!listContainer) return;
-    listContainer.innerHTML = "";
-    Object.values(unitsDb).forEach(u => {
-      const card = document.createElement("div");
-      card.className = "unit-card";
-      card.setAttribute("draggable", "true");
-      card.setAttribute("id", u.code);
-      card.onclick = () => openDetails(u.code);
-      card.ondragstart = (e) => drag(e);
-      card.innerHTML = `
-        <div class="unit-header flex items-center justify-between">
-          <span>${u.code}</span>
-          <span class="text-dim/50 cursor-grab hover:text-text flex items-center justify-center py-1 px-2" title="Drag to place unit">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="9" cy="5" r="1.5"></circle>
-              <circle cx="9" cy="12" r="1.5"></circle>
-              <circle cx="9" cy="19" r="1.5"></circle>
-              <circle cx="15" cy="5" r="1.5"></circle>
-              <circle cx="15" cy="12" r="1.5"></circle>
-              <circle cx="15" cy="19" r="1.5"></circle>
-            </svg>
-          </span>
-        </div>
-        <div class="unit-title font-bold text-[14px] mt-1">${u.title}</div>
-        <div class="unit-meta text-[11px] text-dim flex gap-2">
-          <span>${u.cp} CP</span>
-          <span class="table-tag ${getTagColorClass(u.table)}">${getTableShortName(u.table)}</span>
-        </div>
-        <div class="unit-session text-[11px] text-dim mt-0.5">${u.availText}</div>
-      `;
-      listContainer.appendChild(card);
-    });
-  }
-
-  function placeUnitInSlots(code, year, term) {
+  window.placeUnitInSlots = function(code, year, term) {
     const u = unitsDb[code];
     if (!u) return;
     const row = document.querySelector(`.row-slots[data-year="${year}"][data-term="${term}"]`);
@@ -1026,26 +672,61 @@
       openDetails(u.code);
     };
     card.innerHTML = `
-      <div class="placed-unit-header flex items-center justify-between w-full">
-        <div class="flex items-center gap-1">
-          <span class="placed-unit-code font-bold">${u.code}</span>
-          <div class="badges-container flex gap-0.5 items-center"></div>
+      <div class="placed-unit-header flex items-start justify-between w-full gap-1 mb-1">
+        <div class="flex items-center gap-1 min-w-0 shrink">
+          <span class="placed-unit-code font-bold truncate">${u.code}</span>
+          <div class="badges-container flex gap-0.5 items-center shrink-0"></div>
         </div>
-        <button class="remove-unit-btn" onclick="event.stopPropagation(); removeUnit(this)">×</button>
+        <button class="remove-unit-btn flex items-center justify-center shrink-0" onclick="event.stopPropagation(); removeUnit(this)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div class="unit-title line-clamp-1 text-[12px]">${u.title}</div>
+      <div class="unit-title line-clamp-1 text-[12px] text-dim">${u.title}</div>
       <div class="unit-meta">
         <span>${u.cp} CP</span>
-        <span class="table-tag ${getTagColorClass(u.table)}">${getTableShortName(u.table)}</span>
+        <span class="table-tag ${getTagColorClass((u.tables && u.tables.length > 0) ? u.tables[0] : null)}">${getTableShortName((u.tables && u.tables.length > 0) ? u.tables[0] : null)}</span>
       </div>
     `;
     row.appendChild(card);
   }
 
+  const mockPlan = [
+    { year: 1, term: "sem1", codes: ["INFO1110", "MEDS1001", "COMP2017", "MATH1021", "BADP2002"] },
+    { year: 1, term: "sem2", codes: ["COMP2123", "MIMI2902"] },
+    { year: 2, term: "sem1", codes: ["BAEN2001"] }
+  ];
+
+  function applyActiveTermsFromPlan(plan) {
+    const activeTerms = new Set();
+    plan.forEach(item => {
+      if (item.codes && item.codes.length > 0) {
+        activeTerms.add(`y${item.year}-${item.term}`);
+      }
+    });
+
+    const terms = ['summ', 'sem1', 'wint', 'sem2'];
+    for (let y = 1; y <= maxYear; y++) {
+      terms.forEach(term => {
+        const cb = document.getElementById(`y${y}-${term}-cb`);
+        const row = document.getElementById(`y${y}-${term}-row`);
+        if (cb && row) {
+          const key = `y${y}-${term}`;
+          const shouldBeActive = activeTerms.has(key);
+          cb.checked = shouldBeActive;
+          row.classList.toggle('hidden', !shouldBeActive);
+        }
+      });
+    }
+  }
+
   function preplaceMockupData() {
-    placeUnitInSlots("INFO1110", "1", "sem1");
-    placeUnitInSlots("COMP2123", "1", "sem2");
-    placeUnitInSlots("COMP2017", "1", "sem2");
+    document.querySelectorAll('.row-slots').forEach(slot => slot.innerHTML = "");
+    applyActiveTermsFromPlan(mockPlan);
+    mockPlan.forEach(item => {
+      item.codes.forEach(code => {
+        placeUnitInSlots(code, item.year, item.term);
+      });
+    });
   }
 
   // DOM Loaded initialization
@@ -1057,19 +738,76 @@
       if (themeBtn) themeBtn.textContent = 'Light';
     }
     
-    // Set default view active term toggles
-    const toggles = ['y1-sem1', 'y1-sem2', 'y2-sem1', 'y2-sem2'];
-    toggles.forEach(t => {
-      const cb = document.getElementById(`${t}-cb`);
-      const row = document.getElementById(`${t}-row`);
-      if (cb && row) {
-        row.classList.toggle('hidden', !cb.checked);
+    addYear(); // Add Year 3 by default
+    
+    let savedPlan = null;
+    let codesToFetch = [];
+    // Auto-loading of saved profile is disabled for now
+    const rawSaved = null; // localStorage.getItem('usyd_planner_layout');
+    if (rawSaved) {
+      try {
+        savedPlan = JSON.parse(rawSaved);
+        savedPlan.forEach(item => {
+          if (item.codes) {
+            item.codes.forEach(code => {
+              if (!codesToFetch.includes(code)) {
+                codesToFetch.push(code);
+              }
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Error parsing saved plan:", e);
       }
-    });
+    }
 
-    renderSearchList();
-    preplaceMockupData();
-    validatePlan();
+    if (!savedPlan || codesToFetch.length === 0) {
+      codesToFetch = ["INFO1110", "MEDS1001", "COMP2017", "MATH1021", "BADP2002", "COMP2123", "MIMI2902", "BAEN2001"];
+      savedPlan = null;
+    }
+
+    // Fetch preplaced unit details from backend before placing them
+    fetch(`/api/units/bulk?codes=${codesToFetch.join(',')}`)
+      .then(res => res.json())
+      .then(units => {
+        units.forEach(u => unitsDb[u.code] = u);
+        if (savedPlan) {
+          let maxYearInPlan = 2;
+          savedPlan.forEach(item => {
+            const y = parseInt(item.year, 10);
+            if (y > maxYearInPlan) maxYearInPlan = y;
+          });
+          while (maxYear < maxYearInPlan) {
+            addYear();
+          }
+          document.querySelectorAll('.row-slots').forEach(slot => slot.innerHTML = "");
+          applyActiveTermsFromPlan(savedPlan);
+          savedPlan.forEach(item => {
+            if (item.codes) {
+              item.codes.forEach(code => {
+                placeUnitInSlots(code, item.year, item.term);
+              });
+            }
+          });
+          validatePlan();
+        } else {
+          preplaceMockupData();
+          validatePlan();
+        }
+      })
+      .catch(err => console.error("Error loading units:", err));
+
+    handleSearch(true);
+
+    // Setup Infinite Scroll
+    const searchContainer = document.getElementById('search-results');
+    if (searchContainer) {
+      searchContainer.addEventListener('scroll', function() {
+        if (this.scrollTop + this.clientHeight >= this.scrollHeight - 100) {
+          handleSearch(false);
+        }
+      });
+    }
   });
 
   // Toggle Semester Row Visibility
@@ -1098,22 +836,63 @@
       let label = "Requisite Warning";
       let boxClass = "warning-box-req";
       // Default SVG: Circle Slash (Red strict rule validations)
-      let svgMarkup = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+      let svgMarkup = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>`;
       
-      if (warning.soft_warning || (warning.message && warning.message.startsWith("Advisory check"))) {
-        label = "Advisory Soft Warning";
+      let displayMsg = warning.message;
+      const isSoft = warning.message && warning.message.startsWith("Advisory check");
+      if (isSoft) {
+        let lowerMsg = warning.message.toLowerCase();
+        if (lowerMsg.includes("grade") || lowerMsg.includes("mark") || lowerMsg.includes("distinction") || lowerMsg.includes("credit") || lowerMsg.includes("pass")) label = "Grade Requirement";
+        else if (lowerMsg.includes("permission") || lowerMsg.includes("consent") || lowerMsg.includes("approval") || lowerMsg.includes("coordinator")) label = "Departmental Permission";
+        else if (lowerMsg.includes("assumed knowledge")) label = "Assumed Knowledge";
+        else if (lowerMsg.includes("manual review") || lowerMsg.includes("unparsed")) label = "Manual Review Required";
+        else label = "Advisory Check";
+        
+        const rawWarning = (warning.soft_warning || warning.message)
+          .replace(/^Advisory check for [A-Z0-9]+:\s*/i, "")
+          .replace(/^Soft warning\(s\):\s*/i, "");
+        const warningMap = {
+          "degree_restriction": "Degree restriction applies",
+          "grade_threshold": "Grade requirement applies",
+          "logic_simplified": "Complex logic simplified",
+          "permission_required": "Departmental permission required",
+          "recommended_preparation": "Recommended preparation",
+          "other": "Other advisory constraints"
+        };
+        displayMsg = rawWarning.split(", ")
+          .map(w => warningMap[w.trim().toLowerCase()] || w)
+          .join(", ");
+
         boxClass = "warning-box-soft";
         svgMarkup = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
-      } else if (warning.type === "prereq_unmet") {
-        label = "Unmet Prerequisite";
-      } else if (warning.type === "coreq_unmet") {
-        label = "Unmet Corequisite";
-      } else if (warning.type === "prohibited") {
-        label = "Prohibited Unit Mismatch";
-      } else if (warning.type === "session_mismatch") {
-        label = "Semester Offering Mismatch";
-        boxClass = "warning-box-miss";
-        svgMarkup = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
+      } else {
+        if (warning.soft_warning) {
+          const rawWarning = warning.soft_warning.replace(/^Soft warning\(s\):\s*/i, "");
+          const warningMap = {
+            "degree_restriction": "Degree restriction applies",
+            "grade_threshold": "Grade requirement applies",
+            "logic_simplified": "Complex logic simplified",
+            "permission_required": "Departmental permission required",
+            "recommended_preparation": "Recommended preparation",
+            "other": "Other advisory constraints"
+          };
+          const mapped = rawWarning.split(", ")
+            .map(w => warningMap[w.trim().toLowerCase()] || w)
+            .join(", ");
+          displayMsg += ` (${mapped})`;
+        }
+        
+        if (warning.type === "prereq_unmet") {
+          label = "Unmet Prerequisite";
+        } else if (warning.type === "coreq_unmet") {
+          label = "Unmet Corequisite";
+        } else if (warning.type === "prohibited") {
+          label = "Prohibited Unit Mismatch";
+        } else if (warning.type === "session_mismatch") {
+          label = "Semester Offering Mismatch";
+          boxClass = "warning-box-miss";
+          svgMarkup = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
+        }
       }
 
       alertBox.className = `flex flex-col gap-1 p-3 rounded-[6px] border text-[13px] leading-relaxed ${boxClass}`;
@@ -1122,7 +901,7 @@
           ${svgMarkup}
           <span>${label}</span>
         </div>
-        <div class="font-semibold text-[12.5px]">${warning.message}</div>
+        <div class="font-semibold text-[12.5px]">${displayMsg}</div>
       `;
       warningsContainer.appendChild(alertBox);
     });
@@ -1148,7 +927,15 @@
     document.getElementById('dsp-title').textContent  = u.title;
     document.getElementById('dsp-avail').textContent  = u.availText;
     document.getElementById('dsp-cp').textContent     = `${u.cp} CP`;
-    document.getElementById('dsp-table').textContent  = u.table;
+    
+    if (u.tables && u.tables.length > 0) {
+      document.getElementById('dsp-table').innerHTML = u.tables.map(t => 
+        `<span class="table-tag ${getTagColorClass(t)}">${getTableShortName(t)}</span>`
+      ).join(', ');
+    } else {
+      document.getElementById('dsp-table').innerHTML = `<span class="table-tag ${getTagColorClass(null)}">${getTableShortName(null)}</span>`;
+    }
+
     document.getElementById('dsp-prereq').textContent = u.prereq || "None";
     document.getElementById('dsp-coreq').textContent  = u.coreq || "None";
     document.getElementById('dsp-prohibit').textContent = u.prohibit || "None";
@@ -1343,7 +1130,7 @@
     });
 
     try {
-      const response = await fetch("http://localhost:8000/api/validate-plan", {
+      const response = await fetch("/api/validate-plan", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -1384,18 +1171,61 @@
               if (badgesContainer) {
                 // Determine color class, icon style, and type class for collapsing
                 let colorClass = "text-warn-req"; 
-                // Default SVG: Circle Slash (Red strict rule validations)
-                let svgMarkup = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+                // Default SVG: Square with Cross (Red strict rule validations)
+                let svgMarkup = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>`;
                 let typeKey = "req"; // Collapse identifier: 'req', 'miss', 'soft'
                 
-                if (warning.soft_warning || (warning.message && warning.message.startsWith("Advisory check"))) {
+                let tooltipMsg = warning.message;
+                
+                const isSoft = warning.message && warning.message.startsWith("Advisory check");
+                if (isSoft) {
                   colorClass = "text-warn-soft";
-                  typeKey = "soft";
+                  
+                  let lowerMsg = warning.message.toLowerCase();
+                  if (lowerMsg.includes("grade") || lowerMsg.includes("mark") || lowerMsg.includes("distinction") || lowerMsg.includes("credit") || lowerMsg.includes("pass")) typeKey = "soft-grade";
+                  else if (lowerMsg.includes("permission") || lowerMsg.includes("consent") || lowerMsg.includes("approval") || lowerMsg.includes("coordinator")) typeKey = "soft-permission";
+                  else if (lowerMsg.includes("assumed knowledge")) typeKey = "soft-assumed";
+                  else if (lowerMsg.includes("manual review") || lowerMsg.includes("unparsed")) typeKey = "soft-manual";
+                  else typeKey = "soft";
+
+                  const rawWarning = (warning.soft_warning || warning.message)
+                    .replace(/^Advisory check for [A-Z0-9]+:\s*/i, "")
+                    .replace(/^Soft warning\(s\):\s*/i, "");
+                  const warningMap = {
+                    "degree_restriction": "Degree restriction applies",
+                    "grade_threshold": "Grade requirement applies",
+                    "logic_simplified": "Complex logic simplified",
+                    "permission_required": "Departmental permission required",
+                    "recommended_preparation": "Recommended preparation",
+                    "other": "Other advisory constraints"
+                  };
+                  tooltipMsg = rawWarning.split(", ")
+                    .map(w => warningMap[w.trim().toLowerCase()] || w)
+                    .join(", ");
+
                   svgMarkup = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
-                } else if (warning.type === "session_mismatch") {
-                  colorClass = "text-warn-miss";
-                  typeKey = "miss";
-                  svgMarkup = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
+                } else {
+                  if (warning.soft_warning) {
+                    const rawWarning = warning.soft_warning.replace(/^Soft warning\(s\):\s*/i, "");
+                    const warningMap = {
+                      "degree_restriction": "Degree restriction applies",
+                      "grade_threshold": "Grade requirement applies",
+                      "logic_simplified": "Complex logic simplified",
+                      "permission_required": "Departmental permission required",
+                      "recommended_preparation": "Recommended preparation",
+                      "other": "Other advisory constraints"
+                    };
+                    const mapped = rawWarning.split(", ")
+                      .map(w => warningMap[w.trim().toLowerCase()] || w)
+                      .join(", ");
+                    tooltipMsg += ` (${mapped})`;
+                  }
+                  
+                  if (warning.type === "session_mismatch") {
+                    colorClass = "text-warn-miss";
+                    typeKey = "miss";
+                    svgMarkup = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
+                  }
                 }
                 
                 // Collapse repeating icons: check if a badge for this typeKey already exists
@@ -1404,18 +1234,17 @@
                   badge = document.createElement("span");
                   badge.className = `${colorClass} warning-badge-icon cursor-help flex items-center group relative`;
                   badge.setAttribute("data-warn-type", typeKey);
+                  let boxClass = `warning-box-${typeKey === 'miss' ? 'miss' : (typeKey.startsWith('soft') ? 'soft' : 'req')}`;
                   badge.innerHTML = `
                     ${svgMarkup}
-                    <div class="warning-tooltip">
-                      ${warning.message}
-                    </div>
+                    <div class="warning-tooltip ${boxClass}">${tooltipMsg.trim()}</div>
                   `;
                   badgesContainer.appendChild(badge);
                 } else {
                   // Append to stylized tooltip content
                   const tooltip = badge.querySelector('.warning-tooltip');
                   if (tooltip) {
-                    tooltip.textContent += `\n• ${warning.message}`;
+                    tooltip.textContent += `\n• ${tooltipMsg}`;
                   }
                 }
               }
@@ -1434,6 +1263,7 @@
       } else {
         const warningsContainer = document.getElementById('dsp-warnings');
         if (warningsContainer) warningsContainer.innerHTML = "";
+        renderActiveWarningsSummary();
       }
     } catch (err) {
       console.error("Error calling validation API:", err);
@@ -1441,31 +1271,78 @@
   }
 
   // Simple search filtering
-  window.handleSearch = function() {
-    const query = document.getElementById('search-input').value.toLowerCase().trim();
-    const filter = document.getElementById('table-filter').value;
-    const cards = document.querySelectorAll('#search-results .unit-card');
+  window.handleSearch = async function(reset = true) {
+    if (reset) {
+      currentPage = 1;
+      hasMore = true;
+      const listContainer = document.getElementById('search-results');
+      if (listContainer) listContainer.innerHTML = '';
+    }
+    if (!hasMore || isFetching) return;
     
-    cards.forEach(card => {
-      const code = card.id;
-      const unit = unitsDb[code];
-      if (!unit) return;
-
-      const matchesQuery = code.toLowerCase().includes(query) || unit.title.toLowerCase().includes(query);
+    isFetching = true;
+    const query = document.getElementById('search-input').value.trim();
+    const filter = document.getElementById('table-filter').value;
+    
+    try {
+      const url = `/api/units?query=${encodeURIComponent(query)}&table=${encodeURIComponent(filter)}&page=${currentPage}&page_size=30`;
+      const response = await fetch(url);
+      // #region agent log
+      fetch('http://127.0.0.1:7735/ingest/154f150c-9b4c-4551-b54a-10154ab9fa9c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0321a6'},body:JSON.stringify({sessionId:'0321a6',location:'index.html:handleSearch:response',message:'fetch response',data:{url,status:response.status,ok:response.ok},timestamp:Date.now(),hypothesisId:'H1',runId:'pre-fix'})}).catch(()=>{});
+      // #endregion
+      const units = await response.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7735/ingest/154f150c-9b4c-4551-b54a-10154ab9fa9c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0321a6'},body:JSON.stringify({sessionId:'0321a6',location:'index.html:handleSearch:parsed',message:'units parsed',data:{count:Array.isArray(units)?units.length:-1,firstCode:Array.isArray(units)&&units[0]?units[0].code:null,hasGetTagColorClass:typeof getTagColorClass},timestamp:Date.now(),hypothesisId:'H3',runId:'pre-fix'})}).catch(()=>{});
+      // #endregion
       
-      let matchesFilter = true;
-      if (filter === 'engineering') matchesFilter = unit.table.toLowerCase().includes('engineering');
-      else if (filter === 'science') matchesFilter = unit.table.toLowerCase().includes('science');
-      else if (filter === 'ole') matchesFilter = unit.table.toLowerCase().includes('open');
-
-      if (matchesQuery && matchesFilter) {
-        card.classList.remove('hidden');
-      } else {
-        card.classList.add('hidden');
-      }
-    });
+      if (units.length < 30) hasMore = false;
+      else currentPage++;
+      
+      const listContainer = document.getElementById('search-results');
+      
+      units.forEach(u => {
+        unitsDb[u.code] = u; // Cache it
+        
+        const card = document.createElement('div');
+        card.className = 'unit-card cursor-grab';
+        card.id = u.code;
+        card.setAttribute('draggable', 'true');
+        card.ondragstart = (e) => drag(e);
+        card.onclick = () => openDetails(u.code);
+        
+        card.innerHTML = `
+          <div class="flex items-center justify-between w-full">
+            <span class="font-bold tracking-tight text-[15px]">${u.code}</span>
+            <span class="catalog-add-btn opacity-30 hover:opacity-100 transition-opacity cursor-pointer p-1" onclick="event.stopPropagation(); quickAdd(this)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="5" r="1.5"></circle>
+                <circle cx="9" cy="12" r="1.5"></circle>
+                <circle cx="9" cy="19" r="1.5"></circle>
+                <circle cx="15" cy="5" r="1.5"></circle>
+                <circle cx="15" cy="12" r="1.5"></circle>
+                <circle cx="15" cy="19" r="1.5"></circle>
+              </svg>
+            </span>
+          </div>
+          <div class="unit-title font-bold text-[14px] mt-1">${u.title}</div>
+          <div class="unit-meta text-[11px] text-dim flex gap-2">
+            <span>${u.cp} CP</span>
+            <span class="table-tag ${getTagColorClass((u.tables && u.tables.length > 0) ? u.tables[0] : null)}">${getTableShortName((u.tables && u.tables.length > 0) ? u.tables[0] : null)}</span>
+          </div>
+          <div class="unit-session text-[11px] text-dim mt-0.5">${u.availText}</div>
+        `;
+        listContainer.appendChild(card);
+      });
+      
+    } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7735/ingest/154f150c-9b4c-4551-b54a-10154ab9fa9c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0321a6'},body:JSON.stringify({sessionId:'0321a6',location:'index.html:handleSearch:catch',message:'search error',data:{name:err&&err.name,message:err&&err.message},timestamp:Date.now(),hypothesisId:'H3',runId:'pre-fix'})}).catch(()=>{});
+      // #endregion
+      console.error('Error fetching search results:', err);
+    } finally {
+      isFetching = false;
+    }
   };
-
   // LocalStorage plan state saving / loading
   window.savePlanToLocalStorage = function() {
     const plan = [];
@@ -1506,6 +1383,9 @@
       // Clear current rows
       document.querySelectorAll('.row-slots').forEach(slot => slot.innerHTML = "");
 
+      // Apply active terms based on the loaded plan
+      applyActiveTermsFromPlan(plan);
+
       plan.forEach(item => {
         item.codes.forEach(code => {
           placeUnitInSlots(code, item.year, item.term);
@@ -1517,6 +1397,61 @@
       alert('Failed to load plan from local storage.');
     }
   };
+  window.closeDetails = function() {
+    document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+    document.getElementById('dsp-populated').style.display = 'none';
+    document.getElementById('dsp-empty').style.display = 'flex';
+    if (typeof window.renderActiveWarningsSummary === 'function') {
+      window.renderActiveWarningsSummary();
+    }
+  };
+
+  window.renderActiveWarningsSummary = function() {
+    const container = document.getElementById('dsp-global-warnings');
+    if (!container) return;
+    container.innerHTML = "";
+    if (window.currentWarnings && window.currentWarnings.length > 0) {
+      const header = document.createElement('div');
+      header.className = "font-extrabold text-[12px] uppercase tracking-wide text-text mb-1";
+      header.textContent = "Active Plan Warnings";
+      container.appendChild(header);
+
+      window.currentWarnings.forEach(warn => {
+        let boxClass = "warning-box-req";
+        let isSoft = warn.message && warn.message.startsWith("Advisory check");
+        if (warn.type === 'overload' || warn.type === 'session_mismatch') boxClass = "warning-box-miss";
+        else if (isSoft || warn.type === 'soft_warning') boxClass = "warning-box-soft";
+        
+        let title = "";
+        if (warn.type === 'overload') title = "Overload Warning";
+        else if (warn.type === 'session_mismatch') title = "Session Mismatch";
+        else if (isSoft) {
+          let lowerMsg = warn.message.toLowerCase();
+          if (lowerMsg.includes("grade") || lowerMsg.includes("mark") || lowerMsg.includes("threshold")) title = "Grade Requirement";
+          else if (lowerMsg.includes("permission") || lowerMsg.includes("consent") || lowerMsg.includes("coordinator")) title = "Permission Required";
+          else if (lowerMsg.includes("assumed")) title = "Assumed Knowledge";
+          else title = "Advisory Warning";
+        }
+        else if (warn.type === 'prereq_unmet') title = "Unmet Prerequisite";
+        else if (warn.type === 'coreq_unmet') title = "Corequisite Unmet";
+        else if (warn.type === 'prohibited') title = "Prohibition Conflict";
+        else title = warn.type.replace(/_/g, " ");
+        
+        const item = document.createElement('div');
+        item.className = `text-[12px] ${boxClass} p-2 rounded-[4px] mb-1.5 leading-snug border text-left`;
+        item.innerHTML = `<span class="font-bold">${warn.unit_code ? warn.unit_code + ': ' : ''}</span>${title}`;
+        container.appendChild(item);
+      });
+    }
+  };
+
+  document.addEventListener('click', (e) => {
+    // If clicking outside the sidebar, search controls, and cards, deselect everything
+    if (e.target.closest('.unit-card') || e.target.closest('.placed-unit-card') || e.target.closest('.right-sidebar-container') || e.target.closest('.search-controls') || e.target.closest('.page-header')) {
+      return;
+    }
+    closeDetails();
+  });
 </script>
 </body>
 </html>

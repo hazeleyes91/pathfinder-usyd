@@ -259,6 +259,7 @@ def parse_rules_with_regex(rule_text: str) -> dict | None:
     
     # Remove common prefixes/suffixes for credit points/units of study
     clean_text = re.sub(r"^(?:a\s+minimum\s+of\s+|completion\s+of\s+|minimum\s+of\s+)", "", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"^(?:a\s+mark\s+of\s+\d+\s*(?:or\s+above)?\s+in\s+|an\s+average\s+mark\s+of\s+\d+\s+in\s+|average\s+of\s+\d+\s+in\s+)", "", clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r"(?:\s+of\s+units\s+of\s+study|\s+of\s+units)$", "", clean_text, flags=re.IGNORECASE)
     
     # 1. Check for "None"

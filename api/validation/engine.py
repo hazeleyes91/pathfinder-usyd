@@ -300,7 +300,7 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
             raw_coreq = unit_rule.get("raw_rules", {}).get("corequisites") if unit_rule else None
             is_coreq_unparsed = coreq_expr and (coreq_expr.get("curation_validity") == "needs_manual_review" or coreq_expr.get("type") == "none") and raw_coreq and raw_coreq.strip().lower() not in ["", "none", "none."]
             
-            if coreq_expr and coreq_expr.get("type") != "none":
+            if coreq_expr and coreq_expr.get("type") != "none" and not is_coreq_unparsed:
                 current_and_completed = completed_units.union(set(codes))
                 satisfied, coreq_warnings = evaluate_rule(coreq_expr, current_and_completed, local_uos_metadata)
                 
@@ -342,7 +342,7 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
             raw_prereq = unit_rule.get("raw_rules", {}).get("prerequisites") if unit_rule else None
             is_unparsed = prereq_expr and (prereq_expr.get("curation_validity") == "needs_manual_review" or prereq_expr.get("type") == "none") and raw_prereq and raw_prereq.strip().lower() not in ["", "none", "none."]
             
-            if prereq_expr and prereq_expr.get("type") != "none":
+            if prereq_expr and prereq_expr.get("type") != "none" and not is_unparsed:
                 satisfied, prereq_warnings = evaluate_rule(prereq_expr, completed_units, local_uos_metadata)
                 
                 soft_msg = None

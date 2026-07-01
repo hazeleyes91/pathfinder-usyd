@@ -84,6 +84,12 @@ async def update_unit_rules(unit_code: str, payload: RuleUpdatePayload):
     Validates updated logic expressions against rule schemas, 
     persists edits back to SQLite tables, and clears curation flags.
     """
+    # Align curation_validity keys with the needs_curation status
+    validity_val = "needs_manual_review" if payload.needs_curation else "valid_for_planning"
+    payload.prerequisites_expr["curation_validity"] = validity_val
+    payload.corequisites_expr["curation_validity"] = validity_val
+    payload.prohibitions_expr["curation_validity"] = validity_val
+
     # 1. Enforce Pydantic validation schemas on input expressions
     ta = TypeAdapter(RuleExpression)
     try:
@@ -493,4 +499,4 @@ if __name__ == "__main__":
     # Start web server automatically
     print(f"Starting Curation Admin Portal...")
     print(f"Static directory: {STATIC_DIR}")
-    uvicorn.run("admin.portal:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("admin.portal:app", host="127.0.0.1", port=8001, reload=True)
