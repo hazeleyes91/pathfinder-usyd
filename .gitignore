@@ -5,7 +5,6 @@ roadmap.md
 __pycache__
 data
 .*
-tests
 *.md
 *.log
 !README.md

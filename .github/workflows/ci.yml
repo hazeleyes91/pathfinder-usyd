@@ -1,4 +1,4 @@
-name: USYD Course Planner CI
+name: Pathfinder USYD CI
 
 on:
   push:
