@@ -61,7 +61,7 @@ def test_serve_planner_root():
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert b"USYD Course Planner" in response.content
+    assert b"Pathfinder USYD" in response.content
 
 
 def test_get_units_prioritizes_unit_code(monkeypatch):
