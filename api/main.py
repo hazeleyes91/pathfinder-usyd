@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # Parent imports
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -35,7 +36,7 @@ def _debug_log(hypothesis_id: str, location: str, message: str, data: dict):
         pass
     # #endregion
 
-app = FastAPI(title="USYD Course Planner")
+app = FastAPI(title="Pathfinder USYD")
 
 
 @app.post("/api/validate-plan", response_model=ValidationResponse)
@@ -234,9 +235,10 @@ async def serve_planner():
         raise HTTPException(status_code=404, detail="Planner UI not found")
     return FileResponse(index)
 
+app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
 
 if __name__ == "__main__":
     import uvicorn
 
-    print("USYD Course Planner running at http://127.0.0.1:8000/")
+    print("PathfinderUSYD running at http://127.0.0.1:8000/")
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)

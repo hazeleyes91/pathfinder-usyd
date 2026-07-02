@@ -298,6 +298,65 @@
             .dsp-assumed {
                 @apply bg-block text-[13px] leading-relaxed;
                 padding: var(--prereq-padding);
+                transition:
+                    background-color 0.15s,
+                    border-color 0.15s;
+            }
+
+            /* Section-level warning states */
+            .dsp-prereq.warn-req,
+            .dsp-coreq.warn-req,
+            .dsp-prohibit.warn-req {
+                background-color: #fdf2f2;
+                border: 1px solid rgba(185, 28, 28, 0.35);
+            }
+            .dsp-prereq.warn-soft,
+            .dsp-coreq.warn-soft,
+            .dsp-assumed.warn-soft {
+                background-color: #eff6ff;
+                border: 1px solid rgba(37, 99, 235, 0.35);
+            }
+            .dsp-field.warn-miss .dsp-value {
+                color: var(--color-warn-miss);
+            }
+            .dsp-field.warn-miss .dsp-label::after {
+                content: " ⚠";
+                color: var(--color-warn-miss);
+            }
+            /* Bold affected codes take the section warning color */
+            .dsp-prereq.warn-req strong,
+            .dsp-coreq.warn-req strong,
+            .dsp-prohibit.warn-req strong {
+                color: var(--color-warn-req);
+            }
+            .dsp-prereq.warn-soft strong,
+            .dsp-coreq.warn-soft strong,
+            .dsp-assumed.warn-soft strong {
+                color: var(--color-warn-soft);
+            }
+            /* Dark mode */
+            body.dark-mode .dsp-prereq.warn-req,
+            body.dark-mode .dsp-coreq.warn-req,
+            body.dark-mode .dsp-prohibit.warn-req {
+                background-color: #1f1212;
+                border-color: rgba(220, 38, 38, 0.35);
+            }
+            body.dark-mode .dsp-prereq.warn-soft,
+            body.dark-mode .dsp-coreq.warn-soft,
+            body.dark-mode .dsp-assumed.warn-soft {
+                background-color: #111827;
+                border-color: rgba(96, 165, 250, 0.35);
+            }
+            /* Overload banner */
+            #dsp-overload-banner {
+                @apply hidden text-[12px] font-semibold px-3 py-2 border-b;
+                background-color: #fff7ed;
+                border-color: rgba(180, 83, 9, 0.3);
+                color: var(--color-warn-miss);
+            }
+            body.dark-mode #dsp-overload-banner {
+                background-color: #24140d;
+                border-color: rgba(217, 119, 6, 0.3);
             }
 
             /* Semester Row Spacing */
@@ -934,13 +993,12 @@
                     <div
                         class="flex flex-col gap-3.5 overflow-y-auto grow dsp-populated-body min-w-0"
                     >
-                        <!-- Detailed Warnings Section -->
-                        <div
-                            id="dsp-warnings"
-                            class="flex flex-col gap-2.5 empty:hidden border-b border-block pb-3.5"
-                        ></div>
+                        <div id="dsp-overload-banner">
+                            ⚠ Overload: This semester exceeds the standard
+                            credit point load.
+                        </div>
 
-                        <div class="dsp-field">
+                        <div class="dsp-field" id="dsp-avail-field">
                             <div class="dsp-label">Availability</div>
                             <div class="dsp-value" id="dsp-avail">—</div>
                         </div>
@@ -952,43 +1010,41 @@
                             <div class="dsp-label">Table</div>
                             <div class="dsp-value" id="dsp-table">—</div>
                         </div>
-                        <div class="dsp-prereq min-w-0 overflow-hidden">
+                        <div class="dsp-prereq min-w-0" id="dsp-prereq-section">
                             <strong class="font-bold block mb-1"
                                 >Prerequisites</strong
                             >
-                            <span
-                                id="dsp-prereq"
-                                class="block overflow-hidden text-ellipsis whitespace-nowrap"
+                            <span id="dsp-prereq" class="block break-words"
                                 >—</span
                             >
                         </div>
-                        <div class="dsp-coreq min-w-0 overflow-hidden">
+                        <div class="dsp-coreq min-w-0" id="dsp-coreq-section">
                             <strong class="font-bold block mb-1"
                                 >Corequisites</strong
                             >
-                            <span
-                                id="dsp-coreq"
-                                class="block overflow-hidden text-ellipsis whitespace-nowrap"
+                            <span id="dsp-coreq" class="block break-words"
                                 >—</span
                             >
                         </div>
-                        <div class="dsp-prohibit min-w-0 overflow-hidden">
+                        <div
+                            class="dsp-prohibit min-w-0"
+                            id="dsp-prohibit-section"
+                        >
                             <strong class="font-bold block mb-1"
                                 >Prohibitions</strong
                             >
-                            <span
-                                id="dsp-prohibit"
-                                class="block overflow-hidden text-ellipsis whitespace-nowrap"
+                            <span id="dsp-prohibit" class="block break-words"
                                 >—</span
                             >
                         </div>
-                        <div class="dsp-assumed min-w-0 overflow-hidden">
+                        <div
+                            class="dsp-assumed min-w-0"
+                            id="dsp-assumed-section"
+                        >
                             <strong class="font-bold block mb-1"
                                 >Assumed Knowledge</strong
                             >
-                            <span
-                                id="dsp-assumed"
-                                class="block overflow-hidden text-ellipsis whitespace-nowrap"
+                            <span id="dsp-assumed" class="block break-words"
                                 >—</span
                             >
                         </div>
@@ -1021,6 +1077,9 @@
             </div>
         </div>
 
+        <script src="/js/warnings/warning-utils.js"></script>
+        <script src="/js/warnings/warning-details.js"></script>
+        <script src="/js/warnings/warning-renderers.js"></script>
         <script>
             // Layout Variables
             const DEFAULT_UNITS_PER_ROW = 4;
@@ -1456,124 +1515,46 @@
                 }
             };
 
+            // ── Warning annotation helpers ────────────────────────────────
+
+            function escapeHtml(text) {
+                if (window.WarningUtils) {
+                    return window.WarningUtils.escapeHtml(text);
+                }
+                if (!text) return "";
+                return String(text)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+            }
+
+            // Bold every occurrence of unit codes or grade patterns in raw text.
+            function annotateText(rawText, affectedCodes, boldGrades) {
+                if (window.WarningUtils) {
+                    return window.WarningUtils.annotateText(
+                        rawText,
+                        affectedCodes,
+                        boldGrades,
+                    );
+                }
+                return escapeHtml(rawText);
+            }
+
+            // Clear all warning state classes from DSP section containers.
+            function clearSectionWarnings() {
+                if (window.WarningDetails) {
+                    window.WarningDetails.clearSectionWarnings();
+                }
+            }
+
             function updateDetailsWarnings(code) {
-                const warningsContainer =
-                    document.getElementById("dsp-warnings");
-                if (!warningsContainer) return;
-                warningsContainer.innerHTML = "";
-
-                const unitWarnings = (window.currentWarnings || []).filter(
-                    (w) => w.unit_code === code,
-                );
-                unitWarnings.forEach((warning) => {
-                    const alertBox = document.createElement("div");
-
-                    let label = "Requisite Warning";
-                    let boxClass = "warning-box-req";
-                    // Default SVG: Circle Slash (Red strict rule validations)
-                    let svgMarkup = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>`;
-
-                    let displayMsg = warning.message;
-                    const isSoft =
-                        warning.message &&
-                        warning.message.startsWith("Advisory check");
-                    if (isSoft) {
-                        let lowerMsg = warning.message.toLowerCase();
-                        if (
-                            lowerMsg.includes("grade") ||
-                            lowerMsg.includes("mark") ||
-                            lowerMsg.includes("distinction") ||
-                            lowerMsg.includes("credit") ||
-                            lowerMsg.includes("pass")
-                        )
-                            label = "Grade Requirement";
-                        else if (
-                            lowerMsg.includes("permission") ||
-                            lowerMsg.includes("consent") ||
-                            lowerMsg.includes("approval") ||
-                            lowerMsg.includes("coordinator")
-                        )
-                            label = "Departmental Permission";
-                        else if (lowerMsg.includes("assumed knowledge"))
-                            label = "Assumed Knowledge";
-                        else if (
-                            lowerMsg.includes("manual review") ||
-                            lowerMsg.includes("unparsed")
-                        )
-                            label = "Manual Review Required";
-                        else label = "Advisory Check";
-
-                        const rawWarning = (
-                            warning.soft_warning || warning.message
-                        )
-                            .replace(/^Advisory check for [A-Z0-9]+:\s*/i, "")
-                            .replace(/^Soft warning\(s\):\s*/i, "");
-                        const warningMap = {
-                            degree_restriction: "Degree restriction applies",
-                            grade_threshold: "Grade requirement applies",
-                            logic_simplified: "Complex logic simplified",
-                            permission_required:
-                                "Departmental permission required",
-                            recommended_preparation: "Recommended preparation",
-                            other: "Other advisory constraints",
-                        };
-                        displayMsg = rawWarning
-                            .split(", ")
-                            .map((w) => warningMap[w.trim().toLowerCase()] || w)
-                            .join(", ");
-
-                        boxClass = "warning-box-soft";
-                        svgMarkup = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
-                    } else {
-                        if (warning.soft_warning) {
-                            const rawWarning = warning.soft_warning.replace(
-                                /^Soft warning\(s\):\s*/i,
-                                "",
-                            );
-                            const warningMap = {
-                                degree_restriction:
-                                    "Degree restriction applies",
-                                grade_threshold: "Grade requirement applies",
-                                logic_simplified: "Complex logic simplified",
-                                permission_required:
-                                    "Departmental permission required",
-                                recommended_preparation:
-                                    "Recommended preparation",
-                                other: "Other advisory constraints",
-                            };
-                            const mapped = rawWarning
-                                .split(", ")
-                                .map(
-                                    (w) =>
-                                        warningMap[w.trim().toLowerCase()] || w,
-                                )
-                                .join(", ");
-                            displayMsg += ` (${mapped})`;
-                        }
-
-                        if (warning.type === "prereq_unmet") {
-                            label = "Unmet Prerequisite";
-                        } else if (warning.type === "coreq_unmet") {
-                            label = "Unmet Corequisite";
-                        } else if (warning.type === "prohibited") {
-                            label = "Prohibited Unit Mismatch";
-                        } else if (warning.type === "session_mismatch") {
-                            label = "Semester Offering Mismatch";
-                            boxClass = "warning-box-miss";
-                            svgMarkup = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
-                        }
-                    }
-
-                    alertBox.className = `flex flex-col gap-1 p-3 rounded-[6px] border text-[13px] leading-relaxed ${boxClass}`;
-                    alertBox.innerHTML = `
-        <div class="flex items-center gap-1.5 font-extrabold uppercase text-[10px] tracking-wider">
-          ${svgMarkup}
-          <span>${label}</span>
-        </div>
-        <div class="font-semibold text-[12.5px]">${displayMsg}</div>
-      `;
-                    warningsContainer.appendChild(alertBox);
-                });
+                if (window.WarningDetails) {
+                    window.WarningDetails.updateDetailsWarnings(
+                        code,
+                        unitsDb,
+                        window.currentWarnings || [],
+                    );
+                }
             }
 
             // Right sidebar details inspection
@@ -1616,16 +1597,24 @@
                         `<span class="table-tag ${getTagColorClass(null)}">${getTableShortName(null)}</span>`;
                 }
 
-                document.getElementById("dsp-prereq").textContent =
-                    u.prereq || "None";
-                document.getElementById("dsp-coreq").textContent =
-                    u.coreq || "None";
-                document.getElementById("dsp-prohibit").textContent =
-                    u.prohibit || "None";
-                document.getElementById("dsp-assumed").textContent =
-                    u.assumed || "None";
+                // Use innerHTML + escapeHtml so updateDetailsWarnings can later
+                // re-render with <strong> bolding without double-escaping.
+                document.getElementById("dsp-prereq").innerHTML = escapeHtml(
+                    u.prereq || "None",
+                );
+                document.getElementById("dsp-coreq").innerHTML = escapeHtml(
+                    u.coreq || "None",
+                );
+                document.getElementById("dsp-prohibit").innerHTML = escapeHtml(
+                    u.prohibit || "None",
+                );
+                document.getElementById("dsp-assumed").innerHTML = escapeHtml(
+                    u.assumed || "None",
+                );
                 document.getElementById("dsp-link").href = u.url;
 
+                // Reset section warning states before applying new ones
+                clearSectionWarnings();
                 updateDetailsWarnings(code);
             };
 
@@ -1820,19 +1809,9 @@
                     placements: placements,
                 };
 
-                // 1. Clean up all existing warning badges on cards
-                document
-                    .querySelectorAll(".badges-container")
-                    .forEach((c) => (c.innerHTML = ""));
-
-                // 2. Clean up overload badges on row headers
-                document
-                    .querySelectorAll(".semester-row-header")
-                    .forEach((header) => {
-                        const overloadBadge =
-                            header.querySelector(".overload-badge");
-                        if (overloadBadge) overloadBadge.remove();
-                    });
+                if (window.WarningRenderers) {
+                    window.WarningRenderers.clearCardAndRowWarnings();
+                }
 
                 try {
                     const response = await fetch("/api/validate-plan", {
@@ -1851,206 +1830,11 @@
                     const data = await response.json();
                     window.currentWarnings = data.warnings || [];
 
-                    // 3. Render warnings from backend
-                    window.currentWarnings.forEach((warning) => {
-                        if (warning.type === "overload") {
-                            const rowId = `y${warning.year}-${warning.term}-row`;
-                            const rowEl = document.getElementById(rowId);
-                            if (rowEl) {
-                                const header = rowEl.querySelector(
-                                    ".semester-row-header",
-                                );
-                                if (header) {
-                                    const badge =
-                                        document.createElement("span");
-                                    badge.className =
-                                        "overload-badge text-warn-miss ml-2 font-bold cursor-help";
-                                    badge.title = warning.message;
-                                    badge.textContent = "⚠ OVERLOAD";
-                                    header.appendChild(badge);
-                                }
-                            }
-                        } else {
-                            // Unit-specific warning: prereq_unmet, coreq_unmet, prohibited, session_mismatch
-                            const slot = document.querySelector(
-                                `.row-slots[data-year="${warning.year}"][data-term="${warning.term}"]`,
-                            );
-                            if (slot) {
-                                const card = slot.querySelector(
-                                    `[data-code="${warning.unit_code}"]`,
-                                );
-                                if (card) {
-                                    const badgesContainer =
-                                        card.querySelector(".badges-container");
-                                    if (badgesContainer) {
-                                        // Determine color class, icon style, and type class for collapsing
-                                        let colorClass = "text-warn-req";
-                                        // Default SVG: Square with Cross (Red strict rule validations)
-                                        let svgMarkup = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>`;
-                                        let typeKey = "req"; // Collapse identifier: 'req', 'miss', 'soft'
-
-                                        let tooltipMsg = warning.message;
-
-                                        const isSoft =
-                                            warning.message &&
-                                            warning.message.startsWith(
-                                                "Advisory check",
-                                            );
-                                        if (isSoft) {
-                                            colorClass = "text-warn-soft";
-
-                                            let lowerMsg =
-                                                warning.message.toLowerCase();
-                                            if (
-                                                lowerMsg.includes("grade") ||
-                                                lowerMsg.includes("mark") ||
-                                                lowerMsg.includes(
-                                                    "distinction",
-                                                ) ||
-                                                lowerMsg.includes("credit") ||
-                                                lowerMsg.includes("pass")
-                                            )
-                                                typeKey = "soft-grade";
-                                            else if (
-                                                lowerMsg.includes(
-                                                    "permission",
-                                                ) ||
-                                                lowerMsg.includes("consent") ||
-                                                lowerMsg.includes("approval") ||
-                                                lowerMsg.includes("coordinator")
-                                            )
-                                                typeKey = "soft-permission";
-                                            else if (
-                                                lowerMsg.includes(
-                                                    "assumed knowledge",
-                                                )
-                                            )
-                                                typeKey = "soft-assumed";
-                                            else if (
-                                                lowerMsg.includes(
-                                                    "manual review",
-                                                ) ||
-                                                lowerMsg.includes("unparsed")
-                                            )
-                                                typeKey = "soft-manual";
-                                            else typeKey = "soft";
-
-                                            const rawWarning = (
-                                                warning.soft_warning ||
-                                                warning.message
-                                            )
-                                                .replace(
-                                                    /^Advisory check for [A-Z0-9]+:\s*/i,
-                                                    "",
-                                                )
-                                                .replace(
-                                                    /^Soft warning\(s\):\s*/i,
-                                                    "",
-                                                );
-                                            const warningMap = {
-                                                degree_restriction:
-                                                    "Degree restriction applies",
-                                                grade_threshold:
-                                                    "Grade requirement applies",
-                                                logic_simplified:
-                                                    "Complex logic simplified",
-                                                permission_required:
-                                                    "Departmental permission required",
-                                                recommended_preparation:
-                                                    "Recommended preparation",
-                                                other: "Other advisory constraints",
-                                            };
-                                            tooltipMsg = rawWarning
-                                                .split(", ")
-                                                .map(
-                                                    (w) =>
-                                                        warningMap[
-                                                            w
-                                                                .trim()
-                                                                .toLowerCase()
-                                                        ] || w,
-                                                )
-                                                .join(", ");
-
-                                            svgMarkup = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
-                                        } else {
-                                            if (warning.soft_warning) {
-                                                const rawWarning =
-                                                    warning.soft_warning.replace(
-                                                        /^Soft warning\(s\):\s*/i,
-                                                        "",
-                                                    );
-                                                const warningMap = {
-                                                    degree_restriction:
-                                                        "Degree restriction applies",
-                                                    grade_threshold:
-                                                        "Grade requirement applies",
-                                                    logic_simplified:
-                                                        "Complex logic simplified",
-                                                    permission_required:
-                                                        "Departmental permission required",
-                                                    recommended_preparation:
-                                                        "Recommended preparation",
-                                                    other: "Other advisory constraints",
-                                                };
-                                                const mapped = rawWarning
-                                                    .split(", ")
-                                                    .map(
-                                                        (w) =>
-                                                            warningMap[
-                                                                w
-                                                                    .trim()
-                                                                    .toLowerCase()
-                                                            ] || w,
-                                                    )
-                                                    .join(", ");
-                                                tooltipMsg += ` (${mapped})`;
-                                            }
-
-                                            if (
-                                                warning.type ===
-                                                "session_mismatch"
-                                            ) {
-                                                colorClass = "text-warn-miss";
-                                                typeKey = "miss";
-                                                svgMarkup = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
-                                            }
-                                        }
-
-                                        // Collapse repeating icons: check if a badge for this typeKey already exists
-                                        let badge =
-                                            badgesContainer.querySelector(
-                                                `[data-warn-type="${typeKey}"]`,
-                                            );
-                                        if (!badge) {
-                                            badge =
-                                                document.createElement("span");
-                                            badge.className = `${colorClass} warning-badge-icon cursor-help flex items-center group relative`;
-                                            badge.setAttribute(
-                                                "data-warn-type",
-                                                typeKey,
-                                            );
-                                            let boxClass = `warning-box-${typeKey === "miss" ? "miss" : typeKey.startsWith("soft") ? "soft" : "req"}`;
-                                            badge.innerHTML = `
-                    ${svgMarkup}
-                    <div class="warning-tooltip ${boxClass}">${tooltipMsg.trim()}</div>
-                  `;
-                                            badgesContainer.appendChild(badge);
-                                        } else {
-                                            // Append to stylized tooltip content
-                                            const tooltip =
-                                                badge.querySelector(
-                                                    ".warning-tooltip",
-                                                );
-                                            if (tooltip) {
-                                                tooltip.textContent += `\n• ${tooltipMsg}`;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
+                    if (window.WarningRenderers) {
+                        window.WarningRenderers.renderCardAndRowWarnings(
+                            window.currentWarnings,
+                        );
+                    }
 
                     // 4. Update warning state in the active details panel in real-time
                     const selectedEl = document.querySelector(
@@ -2064,9 +1848,6 @@
                             updateDetailsWarnings(code);
                         }
                     } else {
-                        const warningsContainer =
-                            document.getElementById("dsp-warnings");
-                        if (warningsContainer) warningsContainer.innerHTML = "";
                         renderActiveWarningsSummary();
                     }
                 } catch (err) {
@@ -2294,69 +2075,10 @@
             };
 
             window.renderActiveWarningsSummary = function () {
-                const container = document.getElementById(
-                    "dsp-global-warnings",
-                );
-                if (!container) return;
-                container.innerHTML = "";
-                if (
-                    window.currentWarnings &&
-                    window.currentWarnings.length > 0
-                ) {
-                    const header = document.createElement("div");
-                    header.className =
-                        "font-extrabold text-[12px] uppercase tracking-wide text-text mb-1";
-                    header.textContent = "Active Plan Warnings";
-                    container.appendChild(header);
-
-                    window.currentWarnings.forEach((warn) => {
-                        let boxClass = "warning-box-req";
-                        let isSoft =
-                            warn.message &&
-                            warn.message.startsWith("Advisory check");
-                        if (
-                            warn.type === "overload" ||
-                            warn.type === "session_mismatch"
-                        )
-                            boxClass = "warning-box-miss";
-                        else if (isSoft || warn.type === "soft_warning")
-                            boxClass = "warning-box-soft";
-
-                        let title = "";
-                        if (warn.type === "overload")
-                            title = "Overload Warning";
-                        else if (warn.type === "session_mismatch")
-                            title = "Session Mismatch";
-                        else if (isSoft) {
-                            let lowerMsg = warn.message.toLowerCase();
-                            if (
-                                lowerMsg.includes("grade") ||
-                                lowerMsg.includes("mark") ||
-                                lowerMsg.includes("threshold")
-                            )
-                                title = "Grade Requirement";
-                            else if (
-                                lowerMsg.includes("permission") ||
-                                lowerMsg.includes("consent") ||
-                                lowerMsg.includes("coordinator")
-                            )
-                                title = "Permission Required";
-                            else if (lowerMsg.includes("assumed"))
-                                title = "Assumed Knowledge";
-                            else title = "Advisory Warning";
-                        } else if (warn.type === "prereq_unmet")
-                            title = "Unmet Prerequisite";
-                        else if (warn.type === "coreq_unmet")
-                            title = "Corequisite Unmet";
-                        else if (warn.type === "prohibited")
-                            title = "Prohibition Conflict";
-                        else title = warn.type.replace(/_/g, " ");
-
-                        const item = document.createElement("div");
-                        item.className = `text-[12px] ${boxClass} p-2 rounded-[4px] mb-1.5 leading-snug border text-left`;
-                        item.innerHTML = `<span class="font-bold">${warn.unit_code ? warn.unit_code + ": " : ""}</span>${title}`;
-                        container.appendChild(item);
-                    });
+                if (window.WarningRenderers) {
+                    window.WarningRenderers.renderActiveWarningsSummary(
+                        window.currentWarnings || [],
+                    );
                 }
             };
 
