@@ -22,18 +22,6 @@
     function updateDetailsWarnings(code, unitsDb, warnings) {
         if (!window.WarningUtils) return;
 
-        // Suppress transitions during clear/reapply to prevent white flash
-        var transitionSections = [
-            "dsp-prereq-section",
-            "dsp-coreq-section",
-            "dsp-prohibit-section",
-            "dsp-assumed-section",
-        ];
-        transitionSections.forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) el.classList.add("no-transition");
-        });
-
         clearSectionWarnings();
 
         var unit = unitsDb && unitsDb[code];
@@ -104,14 +92,6 @@
                 warning.affected_codes,
                 isSoft,
             );
-        });
-
-        // Re-enable transitions after the frame paints
-        requestAnimationFrame(function () {
-            transitionSections.forEach(function (id) {
-                var el = document.getElementById(id);
-                if (el) el.classList.remove("no-transition");
-            });
         });
 
         var placedCard = document.querySelector(

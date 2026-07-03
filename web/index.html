@@ -223,9 +223,6 @@
             .unit-header {
                 @apply flex justify-between items-center font-extrabold text-[15px] mb-1 min-w-0;
             }
-            .placed-unit-code {
-                @apply font-extrabold text-[14px] tracking-tight;
-            }
             .unit-title {
                 @apply block overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-dim font-normal leading-snug mb-1;
             }
@@ -304,11 +301,6 @@
                 transition:
                     background-color 0.15s,
                     border-color 0.15s;
-            }
-
-            .no-transition,
-            .no-transition * {
-                transition: none !important;
             }
 
             /* Section-level warning states */
@@ -1329,7 +1321,7 @@
                 card.innerHTML = `
       <div class="placed-unit-header flex items-start justify-between w-full gap-1 mb-1">
         <div class="flex items-center gap-1 min-w-0 shrink">
-          <span class="placed-unit-code truncate">${u.code}</span>
+          <span class="placed-unit-code font-bold truncate">${u.code}</span>
           <div class="badges-container flex gap-0.5 items-center shrink-0"></div>
         </div>
         <button class="remove-unit-btn flex items-center justify-center shrink-0" onclick="event.stopPropagation(); removeUnit(this)">
@@ -1960,7 +1952,7 @@
                         card.innerHTML = `
           <div class="flex items-center justify-between w-full min-w-0 gap-2">
             <span class="font-bold tracking-tight text-[15px] truncate min-w-0">${u.code}</span>
-            <span class="catalog-add-btn opacity-30 hover:opacity-100 transition-opacity cursor-pointer p-1" onclick="event.stopPropagation(); quickAddUnit(this.closest('.unit-card').id)">
+            <span class="catalog-add-btn opacity-30 hover:opacity-100 transition-opacity cursor-pointer p-1" onclick="event.stopPropagation(); quickAdd(this)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="9" cy="5" r="1.5"></circle>
                 <circle cx="9" cy="12" r="1.5"></circle>
