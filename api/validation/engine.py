@@ -490,16 +490,42 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
                         )
                     )
                 elif soft_msg:
-                    warnings.append(
-                        WarningDetail(
-                            type="coreq_unmet",
-                            unit_code=code,
-                            year=year,
-                            term=term,
-                            message=f"Advisory check for {code}: {soft_msg}",
-                            soft_warning=soft_msg,
-                        )
+                    # Check if soft warning should escalate to hard
+                    from api.validation.escalation import should_escalate, EscalationContext
+
+                    escalation_context = EscalationContext(
+                        completed_units=current_and_completed,
+                        rule_node=coreq_expr.get("rule"),
+                        rule_satisfied=satisfied,
+                        attached_warnings=coreq_warnings,
                     )
+
+                    if should_escalate(escalation_context, coreq_warnings):
+                        # Escalate to hard warning
+                        missing_coreqs = extract_failing_units(coreq_expr, current_and_completed)
+                        warnings.append(
+                            WarningDetail(
+                                type="coreq_unmet",
+                                unit_code=code,
+                                year=year,
+                                term=term,
+                                message=f"Corequisite unmet for {code}: {soft_msg}",
+                                soft_warning=soft_msg,
+                                affected_codes=missing_coreqs or None,
+                            )
+                        )
+                    else:
+                        # Keep as soft warning
+                        warnings.append(
+                            WarningDetail(
+                                type="coreq_unmet",
+                                unit_code=code,
+                                year=year,
+                                term=term,
+                                message=f"Advisory check for {code}: {soft_msg}",
+                                soft_warning=soft_msg,
+                            )
+                        )
             elif is_coreq_unparsed:
                 soft_msg = f"Advisory check for {code}: Corequisite requires manual review: {raw_coreq}"
                 warnings.append(
@@ -553,16 +579,42 @@ def run_validation(request: ValidationRequest) -> ValidationResponse:
                         )
                     )
                 elif soft_msg:
-                    warnings.append(
-                        WarningDetail(
-                            type="prereq_unmet",
-                            unit_code=code,
-                            year=year,
-                            term=term,
-                            message=f"Advisory check for {code}: {soft_msg}",
-                            soft_warning=soft_msg,
-                        )
+                    # Check if soft warning should escalate to hard
+                    from api.validation.escalation import should_escalate, EscalationContext
+
+                    escalation_context = EscalationContext(
+                        completed_units=completed_units,
+                        rule_node=prereq_expr.get("rule"),
+                        rule_satisfied=satisfied,
+                        attached_warnings=prereq_warnings,
                     )
+
+                    if should_escalate(escalation_context, prereq_warnings):
+                        # Escalate to hard warning
+                        missing_prereqs = extract_failing_units(prereq_expr, completed_units)
+                        warnings.append(
+                            WarningDetail(
+                                type="prereq_unmet",
+                                unit_code=code,
+                                year=year,
+                                term=term,
+                                message=f"Prerequisite unmet for {code}: {soft_msg}",
+                                soft_warning=soft_msg,
+                                affected_codes=missing_prereqs or None,
+                            )
+                        )
+                    else:
+                        # Keep as soft warning
+                        warnings.append(
+                            WarningDetail(
+                                type="prereq_unmet",
+                                unit_code=code,
+                                year=year,
+                                term=term,
+                                message=f"Advisory check for {code}: {soft_msg}",
+                                soft_warning=soft_msg,
+                            )
+                        )
             elif is_unparsed:
                 soft_msg = f"Advisory check for {code}: Prerequisite requires manual review: {raw_prereq}"
                 warnings.append(
