@@ -1576,10 +1576,6 @@
                     .querySelectorAll(`[data-code="${code}"]`)
                     .forEach((el) => el.classList.add("selected"));
 
-                document.getElementById("dsp-empty").style.display = "none";
-                const pop = document.getElementById("dsp-populated");
-                pop.style.display = "flex";
-
                 document.getElementById("dsp-code").textContent = u.code;
                 document.getElementById("dsp-title").textContent = u.title;
                 document.getElementById("dsp-avail").textContent = u.availText;
@@ -1597,25 +1593,14 @@
                         `<span class="table-tag ${getTagColorClass(null)}">${getTableShortName(null)}</span>`;
                 }
 
-                // Use innerHTML + escapeHtml so updateDetailsWarnings can later
-                // re-render with <strong> bolding without double-escaping.
-                document.getElementById("dsp-prereq").innerHTML = escapeHtml(
-                    u.prereq || "None",
-                );
-                document.getElementById("dsp-coreq").innerHTML = escapeHtml(
-                    u.coreq || "None",
-                );
-                document.getElementById("dsp-prohibit").innerHTML = escapeHtml(
-                    u.prohibit || "None",
-                );
-                document.getElementById("dsp-assumed").innerHTML = escapeHtml(
-                    u.assumed || "None",
-                );
                 document.getElementById("dsp-link").href = u.url;
 
-                // Reset section warning states before applying new ones
-                clearSectionWarnings();
+                // Update warning classes and text contents before displaying panel to avoid flash
                 updateDetailsWarnings(code);
+
+                document.getElementById("dsp-empty").style.display = "none";
+                const pop = document.getElementById("dsp-populated");
+                pop.style.display = "flex";
             };
 
             // Drag operations

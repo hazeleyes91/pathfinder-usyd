@@ -275,6 +275,55 @@ class TestEscalation(unittest.TestCase):
         # Requires unit with 3+ warnings in DB
         pass
 
+    def test_wildcard_affected_codes(self):
+        """Verify that affected_codes contains wildcard patterns when wildcard prerequisite is unmet."""
+        import api.validation.engine as engine
+        
+        # Inject mock unit with wildcard prerequisites into RULES_DB
+        engine.RULES_DB["COMP3999"] = {
+            "unit_code": "COMP3999",
+            "prerequisites_expr": {
+                "type": "unit",
+                "rule": {"type": "unit", "unit_code": "COMP2XXX"}
+            },
+            "corequisites_expr": {"type": "none", "rule": None},
+            "prohibitions_expr": {"type": "none", "rule": None}
+        }
+        
+        # Inject metadata
+        engine.UOS_METADATA["COMP3999"] = {
+            "unit_code": "COMP3999",
+            "title": "Mock Wildcard Unit",
+            "credit_points": 6,
+            "level": "Undergraduate"
+        }
+        
+        try:
+            payload = {
+                "mode": "free",
+                "start_year": 2026,
+                "placements": [
+                    {"year": 1, "term": "sem1", "codes": ["COMP3999"]}
+                ]
+            }
+            response = self.client.post("/api/validate-plan", json=payload)
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertFalse(data["valid"])
+            
+            # Find prereq_unmet warning for COMP3999
+            warnings = [w for w in data["warnings"] if w["unit_code"] == "COMP3999" and w["type"] == "prereq_unmet"]
+            self.assertEqual(len(warnings), 1)
+            # affected_codes should contain the wildcard "COMP2XXX"
+            self.assertEqual(warnings[0]["affected_codes"], ["COMP2XXX"])
+            
+        finally:
+            # Clean up injected mock rules
+            if "COMP3999" in engine.RULES_DB:
+                del engine.RULES_DB["COMP3999"]
+            if "COMP3999" in engine.UOS_METADATA:
+                del engine.UOS_METADATA["COMP3999"]
+
 
 if __name__ == "__main__":
     unittest.main()

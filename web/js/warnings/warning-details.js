@@ -22,23 +22,10 @@
     function updateDetailsWarnings(code, unitsDb, warnings) {
         if (!window.WarningUtils) return;
 
-        clearSectionWarnings();
-
         var unit = unitsDb && unitsDb[code];
-        if (unit) {
-            var plainFields = {
-                "dsp-prereq": unit.prereq || "None",
-                "dsp-coreq": unit.coreq || "None",
-                "dsp-prohibit": unit.prohibit || "None",
-                "dsp-assumed": unit.assumed || "None",
-            };
-
-            Object.entries(plainFields).forEach(function (entry) {
-                var id = entry[0];
-                var text = entry[1];
-                var el = document.getElementById(id);
-                if (el) el.innerHTML = window.WarningUtils.escapeHtml(text);
-            });
+        if (!unit) {
+            clearSectionWarnings();
+            return;
         }
 
         var allWarnings = warnings || [];
@@ -46,73 +33,122 @@
             return warning.unit_code === code;
         });
 
-        var sectionMap = {
-            prereq_unmet: {
+        // Precompute warning state for each details sidebar block
+        var sections = {
+            prereq: {
                 sectionId: "dsp-prereq-section",
                 spanId: "dsp-prereq",
-                field: "prereq",
+                rawText: unit.prereq || "None",
+                warningClass: null,
+                isSoft: false,
+                affectedCodes: []
             },
-            coreq_unmet: {
+            coreq: {
                 sectionId: "dsp-coreq-section",
                 spanId: "dsp-coreq",
-                field: "coreq",
+                rawText: unit.coreq || "None",
+                warningClass: null,
+                isSoft: false,
+                affectedCodes: []
             },
-            prohibited: {
+            prohibit: {
                 sectionId: "dsp-prohibit-section",
                 spanId: "dsp-prohibit",
-                field: "prohibit",
+                rawText: unit.prohibit || "None",
+                warningClass: null,
+                isSoft: false,
+                affectedCodes: []
             },
+            assumed: {
+                sectionId: "dsp-assumed-section",
+                spanId: "dsp-assumed",
+                rawText: unit.assumed || "None",
+                warningClass: null,
+                isSoft: false,
+                affectedCodes: []
+            }
         };
 
-        unitWarnings.forEach(function (warning) {
-            var isSoft = window.WarningUtils.isSoftWarning(warning);
+        var availWarningClass = null;
 
+        unitWarnings.forEach(function (warning) {
             if (warning.type === "session_mismatch") {
-                var availField = document.getElementById("dsp-avail-field");
-                if (availField) availField.classList.add("warn-miss");
+                availWarningClass = "warn-miss";
                 return;
             }
 
-            var mapping = sectionMap[warning.type];
-            if (!mapping) return;
+            var isSoft = window.WarningUtils.isSoftWarning(warning);
+            var key = null;
+            if (warning.type === "prereq_unmet") key = "prereq";
+            else if (warning.type === "coreq_unmet") key = "coreq";
+            else if (warning.type === "prohibited") key = "prohibit";
 
-            var section = document.getElementById(mapping.sectionId);
-            var span = document.getElementById(mapping.spanId);
-            if (!section || !span) return;
-
-            section.classList.add(isSoft ? "warn-soft" : "warn-req");
-
-            var currentUnit = unitsDb && unitsDb[code];
-            var rawText = currentUnit
-                ? currentUnit[mapping.field] || "None"
-                : span.textContent;
-
-            span.innerHTML = window.WarningUtils.annotateText(
-                rawText,
-                warning.affected_codes,
-                isSoft,
-            );
+            if (key) {
+                var sec = sections[key];
+                sec.isSoft = isSoft;
+                sec.warningClass = isSoft ? "warn-soft" : "warn-req";
+                if (warning.affected_codes) {
+                    sec.affectedCodes = sec.affectedCodes.concat(warning.affected_codes);
+                }
+            }
         });
 
-        var placedCard = document.querySelector(
-            '.placed-unit-card[data-code="' + code + '"]',
-        );
-        if (placedCard) {
-            var row = placedCard.closest(".row-slots");
-            if (row) {
-                var year = parseInt(row.getAttribute("data-year"), 10);
-                var term = row.getAttribute("data-term");
-                var overloaded = allWarnings.some(function (warning) {
-                    return (
-                        warning.type === "overload" &&
-                        warning.year === year &&
-                        warning.term === term
-                    );
-                });
+        // Apply calculated states to the DOM in a single pass
+        Object.keys(sections).forEach(function (key) {
+            var sec = sections[key];
+            var sectionEl = document.getElementById(sec.sectionId);
+            var spanEl = document.getElementById(sec.spanId);
+            if (!sectionEl || !spanEl) return;
 
-                var banner = document.getElementById("dsp-overload-banner");
-                if (banner) banner.style.display = overloaded ? "block" : "none";
+            // Apply warning classes
+            sectionEl.classList.remove("warn-req", "warn-soft", "warn-miss");
+            if (sec.warningClass) {
+                sectionEl.classList.add(sec.warningClass);
             }
+
+            // Populate text/markup
+            if (sec.warningClass) {
+                spanEl.innerHTML = window.WarningUtils.annotateText(
+                    sec.rawText,
+                    sec.affectedCodes,
+                    sec.isSoft
+                );
+            } else {
+                spanEl.innerHTML = window.WarningUtils.escapeHtml(sec.rawText);
+            }
+        });
+
+        // Update availability warning class
+        var availField = document.getElementById("dsp-avail-field");
+        if (availField) {
+            availField.classList.remove("warn-req", "warn-soft", "warn-miss");
+            if (availWarningClass) {
+                availField.classList.add(availWarningClass);
+            }
+        }
+
+        // Update overload banner
+        var banner = document.getElementById("dsp-overload-banner");
+        if (banner) {
+            var overloaded = false;
+            var placedCard = document.querySelector(
+                '.placed-unit-card[data-code="' + code + '"]',
+            );
+            if (placedCard) {
+                var row = placedCard.closest(".row-slots");
+                if (row) {
+                    var year = parseInt(row.getAttribute("data-year"), 10);
+                    var term = row.getAttribute("data-term");
+                    overloaded = allWarnings.some(function (warning) {
+                        return (
+                            warning.type === "overload" &&
+                            warning.year === year &&
+                            warning.term === term
+                        );
+                    });
+                }
+            }
+            banner.style.display = overloaded ? "block" : "none";
         }
     }
 

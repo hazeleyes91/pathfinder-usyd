@@ -30,19 +30,19 @@ def _extract_failing_recursive(node: dict, completed_units: Set[str]) -> List[st
 
     if node_type == "unit":
         code = node.get("unit_code", "")
-        if not code or "X" in code or "x" in code:
+        if not code:
             return []
         return [code] if not match_wildcard(code, completed_units) else []
 
     elif node_type == "unit_group":
         operator = node.get("operator", "AND")
-        codes = [c for c in node.get("unit_codes", []) if "X" not in c and "x" not in c]
+        codes = node.get("unit_codes", [])
         if operator == "AND":
-            return [c for c in codes if c not in completed_units]
+            return [c for c in codes if not match_wildcard(c, completed_units)]
         else:  # OR
-            if any(c in completed_units for c in codes):
+            if any(match_wildcard(c, completed_units) for c in codes):
                 return []  # at least one alternative is satisfied
-            return [c for c in codes if c not in completed_units]
+            return [c for c in codes if not match_wildcard(c, completed_units)]
 
     elif node_type == "logical":
         operator = node.get("operator", "AND")

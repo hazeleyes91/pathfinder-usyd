@@ -12,7 +12,7 @@
 
         (affectedCodes || []).forEach(function (code) {
             html = html.replace(
-                new RegExp("\\\\b" + code + "\\\\b", "g"),
+                new RegExp("\\b" + code + "\\b", "g"),
                 "<strong>" + code + "</strong>",
             );
         });
