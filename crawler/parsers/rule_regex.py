@@ -251,12 +251,27 @@ def parse_rules_with_regex(rule_text: str) -> dict | None:
     """
     clean_text = rule_text.strip().rstrip(".")
     
+    # Normalize whitespaces and non-breaking spaces
+    clean_text = re.sub(r"\s+", " ", clean_text)
+    
     # 0. Clean equivalent study variations and normalize brackets
     clean_text = re.sub(r"\s+or\s+equivalent\s+study\s+at\s+another\s+institution", "", clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r"\s+or\s+equivalent\s+unit\s+of\s+study", "", clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r"\s+or\s+equivalent", "", clean_text, flags=re.IGNORECASE)
     clean_text = clean_text.replace("{", "(").replace("}", ")").replace("[", "(").replace("]", ")")
     
+    # Strip Distinction / Credit grade level results globally
+    clean_text = re.sub(r"(?:with\s+)?distinction(?:\s*-\s*|\s+)level\s+results?\s+in(?:\s+at\s+least\s+one\s+of\s+these\s+units)?", "", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"distinction\s+level\s+results?\s+in", "", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"with\s+distinction\s+level\s+results?.*$", "", clean_text, flags=re.IGNORECASE)
+    
+    # Strip WAM requirements globally
+    clean_text = re.sub(r"(?:with\s+a\s+minimum\s+wam\s+of\s+\d+%?|wam\s*>=\s*\d+|a\s+wam\s+of\s+\d+\s+and)", "", clean_text, flags=re.IGNORECASE)
+    
+    # Strip mark/average thresholds globally
+    clean_text = re.sub(r"(?:a\s+mark\s+of\s+(?:at\s+least\s+)?\d+\s*(?:or\s+above)?\s+(?:in|from)\s+|an?\s+(?:annual\s+)?average\s+mark\s+of\s+(?:at\s+least\s+)?\d+\s*(?:or\s+above)?\s+in\s+)", "", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"\b\d+\s+or\s+above\s+in\s+", "", clean_text, flags=re.IGNORECASE)
+
     # Remove common prefixes/suffixes for credit points/units of study
     clean_text = re.sub(r"^(?:a\s+minimum\s+of\s+|completion\s+of\s+|minimum\s+of\s+)", "", clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r"^(?:a\s+mark\s+of\s+\d+\s*(?:or\s+above)?\s+in\s+|an\s+average\s+mark\s+of\s+\d+\s+in\s+|average\s+of\s+\d+\s+in\s+)", "", clean_text, flags=re.IGNORECASE)

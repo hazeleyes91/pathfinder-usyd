@@ -262,5 +262,30 @@ class TestRuleParsers(unittest.TestCase):
         # Note: BCMB2X02 is parsed as a unit requirement within CP_SELECTION or direct
         self.assertEqual(set(res2["operands"][1]["unit_codes"]), {"BCMB2X02"})
 
+    def test_grade_and_mark_thresholds(self):
+        """Verify that Distinction grade requirements, WAM, and mark thresholds parse successfully."""
+        # 1. COMP2823 style: Distinction level results in (INFO1110 or INFO1910 or INFO1113)
+        res1 = parse_rules_with_regex("Distinction level results in (INFO1110 or INFO1910 or INFO1113)")
+        self.assertIsNotNone(res1)
+        self.assertEqual(res1["type"], "unit_group")
+        self.assertEqual(res1["operator"], "OR")
+        self.assertEqual(set(res1["unit_codes"]), {"INFO1110", "INFO1910", "INFO1113"})
+
+        # 2. COMP2922 style: Nested Distinction results inside AND logic with non-breaking spaces
+        res2 = parse_rules_with_regex("(INFO1110 or INFO1910 or INFO1113) and (Distinction level results in\xa0INFO1110 or INFO1910\xa0or MATH1064)")
+        self.assertIsNotNone(res2)
+        self.assertEqual(res2["type"], "logical")
+        self.assertEqual(res2["operator"], "AND")
+        self.assertEqual(res2["operands"][0]["type"], "unit_group")
+        self.assertEqual(res2["operands"][1]["type"], "unit_group")
+
+        # 3. Mark/WAM style: COMP3909/AMED3901/CHEM2921 style thresholds
+        res3 = parse_rules_with_regex("A WAM of 70 and a mark of 70 or above in (COMP2123 or COMP2823)")
+        self.assertIsNotNone(res3)
+        self.assertEqual(res3["type"], "unit_group")
+        self.assertEqual(res3["operator"], "OR")
+        self.assertEqual(set(res3["unit_codes"]), {"COMP2123", "COMP2823"})
+
+
 if __name__ == '__main__':
     unittest.main()

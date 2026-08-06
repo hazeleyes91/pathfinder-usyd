@@ -41,6 +41,9 @@ class UnitDependencyCheck:
 
     @staticmethod
     def check(context: EscalationContext) -> bool:
+        if context.rule_satisfied:
+            return False
+
         required_units = extract_required_units(context.rule_node)
         if not required_units:
             return False
@@ -55,6 +58,9 @@ class WildcardDependencyCheck:
 
     @staticmethod
     def check(context: EscalationContext) -> bool:
+        if context.rule_satisfied:
+            return False
+
         wildcard_patterns = extract_wildcard_patterns(context.rule_node)
         if not wildcard_patterns:
             return False

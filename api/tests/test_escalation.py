@@ -24,7 +24,7 @@ class TestUnitDependencyCheck:
         context = EscalationContext(
             completed_units={"INFO1110", "COMP1001"},
             rule_node={"type": "unit", "unit_code": "COMP2123"},
-            rule_satisfied=True,
+            rule_satisfied=False,
             attached_warnings=["grade_threshold"],
         )
         assert UnitDependencyCheck.check(context) is True
@@ -44,7 +44,7 @@ class TestUnitDependencyCheck:
         context = EscalationContext(
             completed_units={"COMP2123"},
             rule_node={"type": "unit_group", "operator": "AND", "unit_codes": ["COMP2123", "INFO1110"]},
-            rule_satisfied=True,
+            rule_satisfied=False,
             attached_warnings=["grade_threshold"],
         )
         assert UnitDependencyCheck.check(context) is True
@@ -89,7 +89,7 @@ class TestWildcardDependencyCheck:
         context = EscalationContext(
             completed_units={"INFO1110", "BIOL2001"},
             rule_node={"type": "unit", "unit_code": "COMP2XXX"},
-            rule_satisfied=True,
+            rule_satisfied=False,
             attached_warnings=["grade_threshold"],
         )
         assert WildcardDependencyCheck.check(context) is True
@@ -142,7 +142,7 @@ class TestWildcardDependencyCheck:
                 "operator": "OR",
                 "unit_codes": ["COMP2XXX", "INFO3XXX"],
             },
-            rule_satisfied=True,
+            rule_satisfied=False,
             attached_warnings=["grade_threshold"],
         )
         assert WildcardDependencyCheck.check(context) is True
@@ -216,7 +216,7 @@ class TestShouldEscalate:
         context = EscalationContext(
             completed_units={"INFO1110"},
             rule_node={"type": "unit", "unit_code": "COMP2123"},
-            rule_satisfied=True,
+            rule_satisfied=False,
             attached_warnings=["grade_threshold"],
         )
         assert should_escalate(context, ["grade_threshold"]) is True
@@ -226,6 +226,20 @@ class TestShouldEscalate:
         context = EscalationContext(
             completed_units={"COMP2123"},
             rule_node={"type": "unit", "unit_code": "COMP2123"},
+            rule_satisfied=True,
+            attached_warnings=["grade_threshold"],
+        )
+        assert should_escalate(context, ["grade_threshold"]) is False
+
+    def test_comp2823_or_prereq_stays_soft_when_satisfied(self):
+        """COMP2823 distinction requirement should stay soft when one OR option is completed."""
+        context = EscalationContext(
+            completed_units={"INFO1110"},
+            rule_node={
+                "type": "unit_group",
+                "operator": "OR",
+                "unit_codes": ["INFO1110", "INFO1910", "INFO1113"],
+            },
             rule_satisfied=True,
             attached_warnings=["grade_threshold"],
         )
@@ -286,7 +300,7 @@ class TestShouldEscalate:
         context = EscalationContext(
             completed_units={"INFO1110"},
             rule_node={"type": "unit", "unit_code": "COMP2XXX"},
-            rule_satisfied=True,
+            rule_satisfied=False,
             attached_warnings=["grade_threshold"],
         )
         assert should_escalate(context, ["grade_threshold"]) is True
