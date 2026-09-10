@@ -80,6 +80,15 @@ def init_db():
         FOREIGN KEY (unit_code) REFERENCES units (unit_code) ON DELETE CASCADE
     );
     """)
+
+    # 5. Create session_plans table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS session_plans (
+        session_id TEXT PRIMARY KEY,
+        plan_json TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
     
     conn.commit()
     conn.close()

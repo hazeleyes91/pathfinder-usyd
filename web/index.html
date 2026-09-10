@@ -12,6 +12,7 @@
         />
 
         <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+        <script src="js/plan-storage.js"></script>
 
         <style type="text/tailwindcss">
             :root {
@@ -502,6 +503,30 @@
                 </button>
                 <button id="btn-struct" onclick="setMode('struct')">
                     Struct Mode
+                </button>
+                <div class="h-4 border-r border-dim opacity-30 mx-1 self-center"></div>
+                <span id="save-status" class="text-[12px] text-muted font-medium self-center px-1.5 py-0.5 rounded"></span>
+                <button
+                    id="btn-export-json"
+                    class="flex items-center gap-1.5"
+                    onclick="PathfinderStorage.exportPlan()"
+                    title="Export plan to JSON file"
+                >
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span>Export JSON</span>
+                </button>
+                <button
+                    id="btn-load-json"
+                    class="flex items-center gap-1.5"
+                    onclick="PathfinderStorage.importPlan()"
+                    title="Load plan from JSON file"
+                >
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                    </svg>
+                    <span>Load JSON</span>
                 </button>
                 <button
                     onclick="document.body.classList.toggle('dark-mode')"
@@ -1058,22 +1083,7 @@
                     >
                 </div>
 
-                <div
-                    class="flex gap-1.5 border-t border-block shrink-0 dsp-footer"
-                >
-                    <button
-                        class="px-2.5 py-1.5 text-[13px] flex-1"
-                        onclick="savePlanToLocalStorage()"
-                    >
-                        Save
-                    </button>
-                    <button
-                        class="px-2.5 py-1.5 text-[13px] flex-1"
-                        onclick="loadPlanFromLocalStorage()"
-                    >
-                        Load
-                    </button>
-                </div>
+
             </div>
         </div>
 
@@ -1370,7 +1380,8 @@
                         );
                         if (cb && row) {
                             const key = `y${y}-${term}`;
-                            const shouldBeActive = activeTerms.has(key);
+                            const isStandardTerm = (term === "sem1" || term === "sem2");
+                            const shouldBeActive = isStandardTerm || activeTerms.has(key);
                             cb.checked = shouldBeActive;
                             row.classList.toggle("hidden", !shouldBeActive);
                         }
@@ -1399,79 +1410,72 @@
                     if (themeBtn) themeBtn.textContent = "Light";
                 }
 
-                addYear(); // Add Year 3 by default
+                // Ensure 3 default years exist
+                while (maxYear < 3) {
+                    addYear();
+                }
 
-                let savedPlan = null;
-                let codesToFetch = [];
-                // Auto-loading of saved profile is disabled for now
-                const rawSaved = null; // localStorage.getItem('usyd_planner_layout');
-                if (rawSaved) {
-                    try {
-                        savedPlan = JSON.parse(rawSaved);
-                        savedPlan.forEach((item) => {
-                            if (item.codes) {
-                                item.codes.forEach((code) => {
-                                    if (!codesToFetch.includes(code)) {
-                                        codesToFetch.push(code);
-                                    }
-                                });
+                // Ensure Semester 1 and Semester 2 are enabled by default for all years
+                function applyDefaultTerms() {
+                    const terms = ["summ", "sem1", "wint", "sem2"];
+                    for (let y = 1; y <= maxYear; y++) {
+                        terms.forEach((term) => {
+                            const cb = document.getElementById(`y${y}-${term}-cb`);
+                            const row = document.getElementById(`y${y}-${term}-row`);
+                            if (cb && row) {
+                                const isStandard = (term === "sem1" || term === "sem2");
+                                cb.checked = isStandard;
+                                row.classList.toggle("hidden", !isStandard);
                             }
                         });
-                    } catch (e) {
-                        console.error("Error parsing saved plan:", e);
                     }
                 }
+                applyDefaultTerms();
 
-                if (!savedPlan || codesToFetch.length === 0) {
-                    codesToFetch = [
-                        "INFO1110",
-                        "MEDS1001",
-                        "COMP2017",
-                        "MATH1021",
-                        "BADP2002",
-                        "COMP2123",
-                        "MIMI2902",
-                        "BAEN2001",
-                    ];
-                    savedPlan = null;
-                }
+                // Initialize storage from active session cookie or local mockup fallback
+                (async () => {
+                    let restored = false;
+                    if (
+                        window.PathfinderStorage &&
+                        typeof window.PathfinderStorage.loadSessionPlan === "function"
+                    ) {
+                        restored = await window.PathfinderStorage.loadSessionPlan();
+                    }
 
-                // Fetch preplaced unit details from backend before placing them
-                fetch(`/api/units/bulk?codes=${codesToFetch.join(",")}`)
-                    .then((res) => res.json())
-                    .then((units) => {
-                        units.forEach((u) => (unitsDb[u.code] = u));
-                        if (savedPlan) {
-                            let maxYearInPlan = 2;
-                            savedPlan.forEach((item) => {
-                                const y = parseInt(item.year, 10);
-                                if (y > maxYearInPlan) maxYearInPlan = y;
-                            });
-                            while (maxYear < maxYearInPlan) {
-                                addYear();
+                    if (!restored) {
+                        const isLocal =
+                            ["localhost", "127.0.0.1"].includes(window.location.hostname) ||
+                            window.location.protocol === "file:";
+                        if (isLocal) {
+                            const mockCodes = [
+                                "INFO1110",
+                                "MEDS1001",
+                                "COMP2017",
+                                "MATH1021",
+                                "BADP2002",
+                                "COMP2123",
+                                "MIMI2902",
+                                "BAEN2001",
+                            ];
+                            try {
+                                const res = await fetch(`/api/units/bulk?codes=${mockCodes.join(",")}`);
+                                if (res.ok) {
+                                    const units = await res.json();
+                                    units.forEach((u) => (unitsDb[u.code] = u));
+                                }
+                            } catch (e) {
+                                console.error("Error preloading mock units:", e);
                             }
+                            preplaceMockupData();
+                            validatePlan();
+                        } else {
                             document
                                 .querySelectorAll(".row-slots")
                                 .forEach((slot) => (slot.innerHTML = ""));
-                            applyActiveTermsFromPlan(savedPlan);
-                            savedPlan.forEach((item) => {
-                                if (item.codes) {
-                                    item.codes.forEach((code) => {
-                                        placeUnitInSlots(
-                                            code,
-                                            item.year,
-                                            item.term,
-                                        );
-                                    });
-                                }
-                            });
-                            validatePlan();
-                        } else {
-                            preplaceMockupData();
                             validatePlan();
                         }
-                    })
-                    .catch((err) => console.error("Error loading units:", err));
+                    }
+                })();
 
                 handleSearch(true);
 
@@ -1835,6 +1839,10 @@
                     } else {
                         renderActiveWarningsSummary();
                     }
+
+                    if (window.PathfinderStorage) {
+                        window.PathfinderStorage.triggerAutoSave();
+                    }
                 } catch (err) {
                     console.error("Error calling validation API:", err);
                 }
@@ -1987,65 +1995,16 @@
                     isFetching = false;
                 }
             };
-            // LocalStorage plan state saving / loading
+            // LocalStorage plan state saving / loading delegates
             window.savePlanToLocalStorage = function () {
-                const plan = [];
-                const slots = document.querySelectorAll(".row-slots");
-                slots.forEach((slot) => {
-                    const year = slot.getAttribute("data-year");
-                    const term = slot.getAttribute("data-term");
-                    const codes = Array.from(slot.children).map((card) =>
-                        card.getAttribute("data-code"),
-                    );
-                    if (codes.length > 0) {
-                        plan.push({ year, term, codes });
-                    }
-                });
-                localStorage.setItem(
-                    "usyd_planner_layout",
-                    JSON.stringify(plan),
-                );
-                alert("Plan successfully saved to browser local storage.");
+                if (window.PathfinderStorage) {
+                    window.PathfinderStorage.savePlan();
+                }
             };
 
             window.loadPlanFromLocalStorage = function () {
-                const raw = localStorage.getItem("usyd_planner_layout");
-                if (!raw) {
-                    alert("No saved plans found in local storage.");
-                    return;
-                }
-                try {
-                    const plan = JSON.parse(raw);
-
-                    // Determine max year in the saved plan
-                    let maxYearInPlan = 2;
-                    plan.forEach((item) => {
-                        const y = parseInt(item.year, 10);
-                        if (y > maxYearInPlan) maxYearInPlan = y;
-                    });
-
-                    // Add missing years
-                    while (maxYear < maxYearInPlan) {
-                        addYear();
-                    }
-
-                    // Clear current rows
-                    document
-                        .querySelectorAll(".row-slots")
-                        .forEach((slot) => (slot.innerHTML = ""));
-
-                    // Apply active terms based on the loaded plan
-                    applyActiveTermsFromPlan(plan);
-
-                    plan.forEach((item) => {
-                        item.codes.forEach((code) => {
-                            placeUnitInSlots(code, item.year, item.term);
-                        });
-                    });
-                    validatePlan();
-                    alert("Plan successfully loaded.");
-                } catch (e) {
-                    alert("Failed to load plan from local storage.");
+                if (window.PathfinderStorage) {
+                    window.PathfinderStorage.loadPlan();
                 }
             };
             window.closeDetails = function () {

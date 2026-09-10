@@ -1,10 +1,11 @@
 import json
 import sys
 import time
+import uuid
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Cookie, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -45,6 +46,75 @@ async def validate_plan(request: ValidationRequest):
     Statelessly validates the complete chronological placements of a student's study plan.
     """
     return run_validation(request)
+
+
+@app.post("/api/plan/autosave")
+async def autosave_plan(
+    payload: Dict[str, Any],
+    response: Response,
+    pathfinder_session: Optional[str] = Cookie(None),
+):
+    """
+    Persists the student's study plan associated with their session cookie.
+    Creates and sets a new session cookie if one is not present.
+    """
+    session_id = pathfinder_session.strip() if pathfinder_session else ""
+    if not session_id:
+        session_id = str(uuid.uuid4())
+
+    plan_json_str = json.dumps(payload)
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO session_plans (session_id, plan_json, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(session_id) DO UPDATE SET
+                plan_json = excluded.plan_json,
+                updated_at = CURRENT_TIMESTAMP;
+            """,
+            (session_id, plan_json_str),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    response.set_cookie(
+        key="pathfinder_session",
+        value=session_id,
+        max_age=2592000,  # 30 days
+        httponly=True,
+        samesite="lax",
+    )
+    return {"status": "ok", "session_id": session_id}
+
+
+@app.get("/api/plan/load")
+async def load_plan(pathfinder_session: Optional[str] = Cookie(None)):
+    """
+    Retrieves the persisted study plan associated with the session cookie.
+    """
+    if not pathfinder_session:
+        return {"plan": None}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT plan_json FROM session_plans WHERE session_id = ?",
+            (pathfinder_session.strip(),),
+        )
+        row = cursor.fetchone()
+        if row and row["plan_json"]:
+            try:
+                return {"plan": json.loads(row["plan_json"])}
+            except Exception:
+                return {"plan": None}
+        return {"plan": None}
+    finally:
+        conn.close()
 
 
 def _build_unit_json(cursor, codes: List[str], sort_results: bool = True) -> List[Dict]:
