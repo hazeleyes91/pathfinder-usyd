@@ -1,5 +1,7 @@
 # Pathfinder USYD
 
+**Live Application:** [https://pathfinder-usyd.vercel.app/](https://pathfinder-usyd.vercel.app/)
+
 An independent, visual degree planner and prerequisite validation engine for students. 
 This tool provides a drag-and-drop interface for mapping out university degree structures while automatically validating credit point limits, semester availabilities, and complex prerequisite/corequisite dependencies against a compiled unit database.
 
